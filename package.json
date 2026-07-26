@@ -1,0 +1,19 @@
+{
+  "name": "mun-certview",
+  "private": true,
+  "version": "0.1.0",
+  "description": "MUN CertView, powered by GDF — free Credly-style credentialing + conference platform for Model UN",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "web": "npm run dev --workspace apps/web",
+    "mobile": "npm run start --workspace apps/mobile",
+    "build:web": "npm run build --workspace apps/web",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

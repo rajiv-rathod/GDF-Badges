@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-background text-foreground font-body antialiased;
+}
+
+/* GDF signature background: subtle globe-grid mesh over deep navy.
+   Stroke color mirrors effects.globeGridStroke in @gdf/shared tokens. */
+.gdf-globe-grid {
+  background-image:
+    linear-gradient(rgba(215, 60, 190, 0.14) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(215, 60, 190, 0.14) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, black 30%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, black 30%, transparent 75%);
+}
+
+.gdf-cta-gradient {
+  background: linear-gradient(135deg, #d73cbe 0%, #ff45e1 100%);
+}
+
+.gdf-hero-glow {
+  background: radial-gradient(ellipse at center, rgba(215, 60, 190, 0.25) 0%, rgba(6, 0, 46, 0) 70%);
+}

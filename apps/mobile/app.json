@@ -1,0 +1,20 @@
+{
+  "expo": {
+    "name": "MUN CertView",
+    "slug": "mun-certview",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#06002e",
+    "splash": {
+      "backgroundColor": "#06002e"
+    },
+    "android": {
+      "package": "social.gdf.certview",
+      "adaptiveIcon": {
+        "backgroundColor": "#06002e"
+      }
+    },
+    "platforms": ["android", "ios"]
+  }
+}

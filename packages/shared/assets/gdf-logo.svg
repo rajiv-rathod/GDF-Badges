@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 64" role="img" aria-label="GDF — Global Diplomacy Forum">
+  <defs>
+    <linearGradient id="gdfSeal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#d73cbe"/>
+      <stop offset="1" stop-color="#ff45e1"/>
+    </linearGradient>
+  </defs>
+  <!-- Globe seal -->
+  <g transform="translate(32 32)">
+    <circle r="26" fill="none" stroke="url(#gdfSeal)" stroke-width="2.5"/>
+    <ellipse rx="26" ry="11" fill="none" stroke="url(#gdfSeal)" stroke-width="1.4" opacity="0.85"/>
+    <ellipse rx="11" ry="26" fill="none" stroke="url(#gdfSeal)" stroke-width="1.4" opacity="0.85"/>
+    <line x1="-26" y1="0" x2="26" y2="0" stroke="url(#gdfSeal)" stroke-width="1.4" opacity="0.85"/>
+    <circle r="4" fill="#ff45e1"/>
+  </g>
+  <!-- Wordmark -->
+  <text x="72" y="41" font-family="Space Grotesk, Inter, sans-serif" font-size="30" font-weight="700" fill="#fbfbf9" letter-spacing="1">GDF</text>
+  <text x="146" y="41" font-family="Inter, sans-serif" font-size="15" font-weight="400" fill="#a9a3c9" letter-spacing="0.5">Global Diplomacy Forum</text>
+</svg>
