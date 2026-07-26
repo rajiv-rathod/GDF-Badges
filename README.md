@@ -3,51 +3,73 @@
 A **free**, Credly-style credentialing + all-in-one conference platform for
 Model UN, built by the **Global Diplomacy Forum**. Organizers issue verifiable
 badges and certificates to delegates; members claim, collect, verify, and share
-them — with self-hosted video meetings built in.
+them — with self-hosted Jitsi video meetings built in.
 
-> **Status:** Phase 0 complete (scaffold + GDF brand system).
-> The full build plan is in [`docs/PLAYBOOK.md`](docs/PLAYBOOK.md); project
-> conventions and brand tokens are in [`CLAUDE.md`](CLAUDE.md).
+## What's implemented
+
+- **Auth + multi-tenancy** — organizer/member signup, each conference is an
+  isolated org (Postgres RLS), org staff roles.
+- **Claim-by-email** — credentials issued to an email link automatically when
+  that address signs up (DB trigger) or logs in (RPC).
+- **Credential engine** — Ed25519-signed canonical credentials, unguessable
+  verify codes, audit log, revocation, public `/verify/{code}` page, and
+  Open Badges 3.0-aligned JSON (`/api/verify/{code}?format=ob3`).
+- **Badges** — 5 seeded GDF templates (Participation, Best Delegate,
+  Outstanding Delegate, Honourable Mention, Chair); single or bulk issue from
+  the delegate roster.
+- **Certificate designer (Canva-style)** — upload a background, drag fields on
+  a live canvas, save per-org templates; **bulk issue** from an XLSX/CSV sheet
+  with column→field mapping, first-row preview, per-row progress, and a signed
+  PDF per delegate (rendered with pdf-lib — no headless browser needed).
+- **Member wallet + public profile** — wallet with public/private toggles,
+  shareable `/u/{slug}` profile, PDF downloads.
+- **Organizer dashboard** — roster import/export (XLSX), issued-credentials
+  table with filters + revoke, claim analytics.
+- **Meetings** — JWT-authed self-hosted Jitsi rooms; staff moderate, credential
+  holders join in-app at `/meet/{id}`.
+- **Gemini AI (feature-flagged)** — award-citation drafting, delegate-sheet
+  cleanup, organizer help assistant. Absent key = features hidden, nothing breaks.
+- **Android app** (`apps/mobile`, Expo) — member wallet: sign in, auto-claim,
+  view/share/verify credentials, download PDFs.
+- **Integrity tests** — canonicalization, sign/verify round-trip, tamper +
+  forged-issuer rejection, revocation and claim semantics (`packages/shared`).
 
 ## Repo layout
 
 ```
-apps/web         Next.js (App Router + Tailwind) — organizer dashboard, designer,
-                 public verify + profile pages. Deploys to Vercel.
-apps/mobile      Expo (React Native, Android-first) — member app.
-packages/shared  Brand tokens, data-model types, Supabase client factory.
-docs/PLAYBOOK.md Phase-by-phase build plan (Phases 0–9) + data model.
+apps/web           Next.js 15 (App Router + Tailwind) — full web app
+apps/mobile        Expo (React Native, Android-first) — member app
+packages/shared    Brand tokens, types, Supabase factory, credential crypto
+supabase/          migrations/0001_init.sql (schema+RLS+functions), seed.sql
+scripts/           generate-signing-keys.mjs
+docs/              PLAYBOOK.md (original plan), DEPLOYMENT.md (incl. 1 GB VM)
 ```
 
-## Getting started
+## Quick start
 
 Requires Node 20+.
 
 ```bash
-npm install            # installs all workspaces from the repo root
+npm install
+npm test                                   # credential integrity tests
+node scripts/generate-signing-keys.mjs     # signing keys → .env.local
 ```
 
-**Web** (http://localhost:3000):
+1. Create a free Supabase project; run `supabase/migrations/0001_init.sql`
+   then `supabase/seed.sql` in the SQL editor.
+2. Copy `apps/web/.env.example` → `apps/web/.env.local` and fill it in.
+3. `npm run web` → http://localhost:3000 — sign up as an **Organizer**, create
+   a conference, import delegates, and issue.
+4. Mobile: copy `apps/mobile/.env.example` → `apps/mobile/.env`, then
+   `npm run mobile` (Expo Go) or build an APK with EAS.
 
-```bash
-npm run web
-```
-
-**Mobile** (Expo dev server — scan the QR with Expo Go on Android):
-
-```bash
-npm run mobile
-```
-
-**Supabase:** create a project at supabase.com, then copy
-`apps/web/.env.example → apps/web/.env.local` and
-`apps/mobile/.env.example → apps/mobile/.env` and fill in your project URL +
-anon key. (Not needed to run the Phase 0 screens.)
+Deployment (Vercel + managed Supabase recommended; notes for running the web
+app on a 1 GB Oracle VM next to Jitsi): see `docs/DEPLOYMENT.md`.
 
 ## Brand
 
 All colors, fonts, radii, and effects come from
-`packages/shared/src/tokens.ts` — the single source of truth for both apps,
-extracted from the live [gdf.social](https://gdf.social) site. Deep midnight
-navy `#06002e`, GDF magenta `#d73cbe`, bright pink `#ff45e1`. If a screen looks
-like a generic SaaS starter, it's wrong.
+`packages/shared/src/tokens.ts` — extracted from the live
+[gdf.social](https://gdf.social) site. Deep midnight navy `#06002e`, GDF
+magenta `#d73cbe`, bright pink `#ff45e1`. If a screen looks like a generic
+SaaS starter, it's wrong.

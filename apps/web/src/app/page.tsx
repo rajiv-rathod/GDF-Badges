@@ -28,13 +28,13 @@ export default function Home() {
 
           <div className="mt-10 flex flex-wrap gap-4">
             <a
-              href="#"
+              href="/signup"
               className="gdf-cta-gradient rounded-md px-7 py-3 font-display font-semibold text-background transition hover:opacity-90"
             >
               Issue credentials
             </a>
             <a
-              href="#"
+              href="/login"
               className="rounded-md border border-primary px-7 py-3 font-display font-semibold text-foreground transition hover:bg-surface"
             >
               Claim your badge
