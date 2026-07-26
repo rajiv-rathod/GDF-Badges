@@ -7,7 +7,7 @@
  * credential's immutable fields. Keys are stored as base64-encoded DER
  * (PKCS#8 private / SPKI public) in environment variables.
  */
-import { createPrivateKey, createPublicKey, generateKeyPairSync, randomBytes, sign, verify } from 'node:crypto';
+import { createHash, createPrivateKey, createPublicKey, generateKeyPairSync, randomBytes, sign, verify } from 'node:crypto';
 
 /** The immutable fields covered by the signature. */
 export interface CanonicalCredential {
@@ -64,11 +64,22 @@ export function verifyCredentialSignature(
   }
 }
 
+export function sha256Hex(value: string): string {
+  return createHash('sha256').update(value).digest('hex');
+}
+
 /**
  * Open Badges 3.0-aligned verifiable credential JSON.
- * Independently verifiable: recompute the canonical form of
- * `credentialSubject.achievement.gdf:canonical` and check `proof.proofValue`
- * against the issuer's published Ed25519 public key.
+ *
+ * Privacy: the recipient's email never appears in this public document — the
+ * identity is a salted-format sha256 hash (per the OB3 IdentityObject hashing
+ * convention) and `gdf:canonical.recipient_email` is redacted the same way.
+ *
+ * Independent verification: take `gdf:canonical`, replace `recipient_email`
+ * with the recipient's actual lowercased email (known to the credential
+ * holder), canonicalize, and check `proof.proofValue` against the issuer's
+ * published Ed25519 key. The `gdf:` prefixed cryptosuite name signals this is
+ * GDF's canonical-JSON scheme, not the W3C eddsa-rdfc-2022 suite.
  */
 export function buildOpenBadgeCredential(options: {
   credential: CanonicalCredential;
@@ -81,6 +92,8 @@ export function buildOpenBadgeCredential(options: {
   baseUrl: string;
 }) {
   const { credential, status, orgName, orgSlug, templateName, signature, publicKeyB64, baseUrl } = options;
+  const emailHash = `sha256$${sha256Hex(credential.recipient_email.toLowerCase())}`;
+  const redactedCanonical: CanonicalCredential = { ...credential, recipient_email: emailHash };
   return {
     '@context': [
       'https://www.w3.org/ns/credentials/v2',
@@ -101,7 +114,7 @@ export function buildOpenBadgeCredential(options: {
     },
     credentialSubject: {
       type: ['AchievementSubject'],
-      identifier: [{ type: 'IdentityObject', identityHash: credential.recipient_email, identityType: 'emailAddress' }],
+      identifier: [{ type: 'IdentityObject', hashed: true, identityHash: emailHash, identityType: 'emailAddress' }],
       name: credential.recipient_name,
       achievement: {
         id: `${baseUrl}/api/verify/${credential.verification_code}`,
@@ -109,13 +122,13 @@ export function buildOpenBadgeCredential(options: {
         name: templateName,
         description: `${templateName} — ${credential.event_name}`,
         criteria: { narrative: credential.event_name },
-        'gdf:canonical': credential,
+        'gdf:canonical': redactedCanonical,
       },
     },
     proof: [
       {
         type: 'DataIntegrityProof',
-        cryptosuite: 'eddsa-rdfc-2022',
+        cryptosuite: 'gdf-eddsa-jcs-2026',
         created: credential.issued_at,
         proofPurpose: 'assertionMethod',
         verificationMethod: `${baseUrl}/api/issuer-key`,

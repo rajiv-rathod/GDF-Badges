@@ -42,15 +42,27 @@ function drawField(page: PDFPage, font: PDFFont, field: CertificateField, value:
   page.drawText(value, { x, y, size, font, color: hexToRgb(field.color) });
 }
 
+/**
+ * SSRF guard: backgrounds may only come from this deployment's own public
+ * Supabase storage (which is where /api/upload puts them). Anything else —
+ * internal IPs, metadata endpoints, arbitrary hosts — is ignored.
+ */
+export function isAllowedBackgroundUrl(url: string): boolean {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!supabaseUrl) return false;
+  return url.startsWith(`${supabaseUrl.replace(/\/$/, '')}/storage/v1/object/public/assets/`);
+}
+
 export async function renderCertificatePdf(
   template: Pick<CertificateTemplate, 'background_url' | 'layout_json' | 'page_size'>,
   values: Record<string, string>,
+  options: { fallbackToSamples?: boolean } = {},
 ): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   const [pw, ph] = PAGE_SIZES[template.page_size] ?? PAGE_SIZES['A4-landscape'];
   const page = doc.addPage([pw, ph]);
 
-  if (template.background_url) {
+  if (template.background_url && isAllowedBackgroundUrl(template.background_url)) {
     try {
       const res = await fetch(template.background_url);
       const bytes = new Uint8Array(await res.arrayBuffer());
@@ -71,7 +83,9 @@ export async function renderCertificatePdf(
 
   const fonts = new Map<StandardFonts, PDFFont>();
   for (const field of template.layout_json as CertificateField[]) {
-    const value = values[field.key] ?? field.sample ?? '';
+    // Samples are designer placeholders — only previews may fall back to them;
+    // a real issued certificate renders mapped values only.
+    const value = values[field.key] ?? (options.fallbackToSamples ? field.sample : '') ?? '';
     if (!value) continue;
     const which = pickFont(field);
     if (!fonts.has(which)) fonts.set(which, await doc.embedFont(which));

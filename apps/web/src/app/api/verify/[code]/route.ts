@@ -14,7 +14,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
   const { code } = await params;
   const admin = supabaseAdmin();
   const { data, error } = await admin.rpc('get_credential_by_code', { p_code: code });
-  if (error || !data) return NextResponse.json({ error: 'Credential not found' }, { status: 404 });
+  // A backend failure must never read as "this credential does not exist".
+  if (error) return NextResponse.json({ error: 'Verification temporarily unavailable' }, { status: 503 });
+  if (!data) return NextResponse.json({ error: 'Credential not found' }, { status: 404 });
 
   const canonical: CanonicalCredential = {
     id: data.id,
@@ -29,7 +31,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
     verification_code: data.verification_code,
   };
   const publicKey = process.env.NEXT_PUBLIC_CREDENTIAL_PUBLIC_KEY ?? '';
-  const signatureValid = verifyCredentialSignature(canonical, data.signature, publicKey);
+  const keyConfigured = publicKey.length > 0;
+  const signatureValid = keyConfigured && verifyCredentialSignature(canonical, data.signature, publicKey);
 
   const url = new URL(request.url);
   if (url.searchParams.get('format') === 'ob3') {
@@ -50,6 +53,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
   return NextResponse.json({
     status: data.status,
     signature_valid: signatureValid,
+    signature_check: keyConfigured ? (signatureValid ? 'valid' : 'invalid') : 'unavailable',
     type: data.type,
     recipient_name: data.recipient_name,
     template_name: data.template_name,

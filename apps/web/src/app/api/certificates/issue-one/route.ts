@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireOrgStaffById } from '@/lib/server/auth';
 import { renderCertificatePdf } from '@/lib/server/certificates';
 import { issueCredential } from '@/lib/server/credentials';
+import { sendCredentialEmail } from '@/lib/server/email';
 import { clientKey, rateLimit } from '@/lib/server/ratelimit';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import type { CertificateField, CertificateTemplate } from '@gdf/shared';
@@ -21,7 +22,7 @@ const schema = z.object({
  * show real progress — which also keeps peak memory tiny on a 1 GB host.
  */
 export async function POST(request: Request) {
-  if (!rateLimit(clientKey(request, 'cert-issue'), 120, 60_000)) {
+  if (!rateLimit(clientKey(request, 'cert-issue'), 600, 60_000)) {
     return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
   }
   const parsed = schema.safeParse(await request.json());
@@ -68,6 +69,24 @@ export async function POST(request: Request) {
     const { data } = admin.storage.from('certs').getPublicUrl(path);
     await admin.from('credentials').update({ asset_url: data.publicUrl }).eq('id', issued.id);
   }
+
+  const origin = new URL(request.url).origin;
+  const { data: templateName } = await admin
+    .from('certificate_templates')
+    .select('name')
+    .eq('id', template.id)
+    .single();
+  // Best-effort notification — never fails the issuance.
+  void sendCredentialEmail({
+    to: issued.recipient_email,
+    recipientName: parsed.data.recipient_name,
+    templateName: templateName?.name ?? 'Certificate',
+    eventName: parsed.data.event_name,
+    orgName: ctx.org.name,
+    verifyUrl: `${origin}/verify/${issued.verification_code}`,
+    claimUrl: `${origin}/signup`,
+    alreadyClaimed: issued.status === 'claimed',
+  });
 
   return NextResponse.json({
     id: issued.id,

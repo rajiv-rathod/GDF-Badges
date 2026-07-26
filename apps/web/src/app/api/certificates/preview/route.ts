@@ -26,6 +26,7 @@ export async function POST(request: Request) {
       page_size: parsed.data.page_size as CertificateTemplate['page_size'],
     },
     parsed.data.values,
+    { fallbackToSamples: true },
   );
   return new NextResponse(Buffer.from(pdf), {
     headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': 'inline; filename=preview.pdf' },

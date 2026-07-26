@@ -17,10 +17,13 @@ export default async function WalletPage() {
   let meetings: Array<{ id: string; room_name: string; scheduled_at: string; status: string; org_name: string }> = [];
   let loadError = '';
   try {
+    // Link anything issued to this email first, then query strictly by user id
+    // (no email pattern matching — emails can contain ILIKE wildcard chars).
+    await admin.rpc('claim_pending_credentials', { p_email: session.email, p_user: session.userId });
     const { data, error } = await admin
       .from('credentials')
       .select('id, type, recipient_name, event_name, issued_at, status, verification_code, asset_url, is_public, org_id, template_id, organizations(name)')
-      .or(`recipient_user_id.eq.${session.userId},recipient_email.ilike.${session.email}`)
+      .eq('recipient_user_id', session.userId)
       .order('issued_at', { ascending: false });
     if (error) throw new Error(error.message);
 

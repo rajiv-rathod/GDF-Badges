@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireOrgStaffById } from '@/lib/server/auth';
+import { escapeIlike } from '@/lib/server/credentials';
 import { supabaseAdmin } from '@/lib/supabase/server';
 
 const schema = z.object({
@@ -35,7 +36,7 @@ export async function POST(request: Request) {
       .from('delegates')
       .select('id')
       .eq('org_id', ctx.org.id)
-      .ilike('email', email)
+      .ilike('email', escapeIlike(email))
       .maybeSingle();
     const row = { ...delegate, email, org_id: ctx.org.id };
     const { error } = existing

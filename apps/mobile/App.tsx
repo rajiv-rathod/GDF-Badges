@@ -161,46 +161,29 @@ function WalletScreen({ session }: { session: Session }) {
   const [credentials, setCredentials] = useState<WalletCredential[]>([]);
   const [publicSlug, setPublicSlug] = useState('');
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [selected, setSelected] = useState<WalletCredential | null>(null);
 
   const load = useCallback(async () => {
     setError('');
     try {
+      // Claim anything issued to this email, then fetch the wallet through the
+      // security-definer RPC (joins org/template names members can't read
+      // directly, and filters strictly to the calling user's credentials).
       await supabase.rpc('claim_my_credentials');
-      const [{ data: creds, error: credError }, { data: profile }] = await Promise.all([
-        supabase
-          .from('credentials')
-          .select('id, type, event_name, issued_at, status, verification_code, asset_url, template_id, organizations(name)')
-          .order('issued_at', { ascending: false }),
+      const [{ data: wallet, error: walletError }, { data: profile }] = await Promise.all([
+        supabase.rpc('get_my_wallet'),
         supabase.from('profiles').select('public_slug').eq('id', session.user.id).single(),
       ]);
-      if (credError) throw new Error(credError.message);
+      if (walletError) throw new Error(walletError.message);
       setPublicSlug(profile?.public_slug ?? '');
-
-      const badgeIds = (creds ?? []).filter((c) => c.type === 'badge').map((c) => c.template_id);
-      const { data: templates } = badgeIds.length
-        ? await supabase.from('badge_templates').select('id, name').in('id', badgeIds)
-        : { data: [] as Array<{ id: string; name: string }> };
-      const nameById = new Map((templates ?? []).map((t) => [t.id, t.name]));
-
-      setCredentials(
-        (creds ?? []).map((c) => ({
-          id: c.id,
-          type: c.type,
-          event_name: c.event_name,
-          issued_at: c.issued_at,
-          status: c.status,
-          verification_code: c.verification_code,
-          asset_url: c.asset_url,
-          org_name: (c.organizations as unknown as { name: string } | null)?.name ?? '',
-          template_name: nameById.get(c.template_id) ?? (c.type === 'badge' ? 'Badge' : 'Certificate'),
-        })),
-      );
+      setCredentials((wallet ?? []) as WalletCredential[]);
     } catch (err) {
       setError((err as Error).message);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [session.user.id]);
 
@@ -229,7 +212,13 @@ function WalletScreen({ session }: { session: Session }) {
       ) : error ? (
         <View style={styles.center}>
           <Text style={styles.error}>{error}</Text>
-          <Pressable style={styles.cta} onPress={load}>
+          <Pressable
+            style={[styles.cta, { marginTop: spacing.md, paddingHorizontal: spacing.xl }]}
+            onPress={() => {
+              setLoading(true);
+              load();
+            }}
+          >
             <Text style={styles.ctaText}>Retry</Text>
           </Pressable>
         </View>
@@ -246,7 +235,16 @@ function WalletScreen({ session }: { session: Session }) {
           data={credentials}
           keyExtractor={(c) => c.id}
           contentContainerStyle={{ padding: spacing.md, gap: spacing.sm }}
-          refreshControl={<RefreshControl refreshing={false} onRefresh={load} tintColor={colors.primary} />}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => {
+                setRefreshing(true);
+                load();
+              }}
+              tintColor={colors.primary}
+            />
+          }
           ListFooterComponent={
             publicSlug ? (
               <Pressable

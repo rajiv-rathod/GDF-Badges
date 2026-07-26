@@ -36,11 +36,9 @@ export default async function VerifyPage({ params }: { params: Promise<{ code: s
     issued_at: data.issued_at,
     verification_code: data.verification_code,
   };
-  const signatureValid = verifyCredentialSignature(
-    canonical,
-    data.signature,
-    process.env.NEXT_PUBLIC_CREDENTIAL_PUBLIC_KEY ?? '',
-  );
+  const publicKey = process.env.NEXT_PUBLIC_CREDENTIAL_PUBLIC_KEY ?? '';
+  const keyConfigured = publicKey.length > 0;
+  const signatureValid = keyConfigured && verifyCredentialSignature(canonical, data.signature, publicKey);
   const revoked = data.status === 'revoked';
   const authentic = signatureValid && !revoked;
 
@@ -54,16 +52,20 @@ export default async function VerifyPage({ params }: { params: Promise<{ code: s
             className={`rounded-lg border-2 p-5 text-center font-display text-lg font-bold ${
               revoked
                 ? 'border-danger bg-danger/10 text-danger'
-                : authentic
-                  ? 'border-success bg-success/10 text-success'
-                  : 'border-danger bg-danger/10 text-danger'
+                : !keyConfigured
+                  ? 'border-primary bg-primary/10 text-accent'
+                  : authentic
+                    ? 'border-success bg-success/10 text-success'
+                    : 'border-danger bg-danger/10 text-danger'
             }`}
           >
             {revoked
               ? '✕ REVOKED — this credential has been revoked by the issuer'
-              : authentic
-                ? '✓ VERIFIED — authentic credential, signature valid'
-                : '✕ SIGNATURE INVALID — this credential could not be verified'}
+              : !keyConfigured
+                ? '⚠ SIGNATURE CHECK UNAVAILABLE — the verification key is not configured on this server'
+                : authentic
+                  ? '✓ VERIFIED — authentic credential, signature valid'
+                  : '✕ SIGNATURE INVALID — this credential could not be verified'}
           </div>
 
           <Card className="mt-6">

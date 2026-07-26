@@ -61,7 +61,7 @@ export function WalletGrid({ credentials }: { credentials: WalletCredential[] })
           <p className="text-sm text-muted">
             {c.event_name} · {c.org_name}
           </p>
-          <p className="mt-1 text-xs text-muted">Issued {new Date(c.issued_at).toLocaleDateString()}</p>
+          <p className="mt-1 text-xs text-muted">Issued {c.issued_at.slice(0, 10)}</p>
           <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-border pt-3 text-sm">
             <Link className="font-semibold text-accent hover:underline" href={`/verify/${c.verification_code}`}>
               Verify

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240">
+  <defs>
+    <linearGradient id="seal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#d73cbe"/><stop offset="1" stop-color="#ff45e1"/>
+    </linearGradient>
+  </defs>
+  <rect width="240" height="240" rx="48" fill="#06002e"/>
+  <g stroke="url(#seal)" stroke-width="8" fill="none" opacity="0.95">
+    <circle cx="120" cy="112" r="62"/>
+    <ellipse cx="120" cy="112" rx="62" ry="26"/>
+    <ellipse cx="120" cy="112" rx="26" ry="62"/>
+  </g>
+  <text x="120" y="215" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="40" font-weight="700" fill="#fbfbf9" letter-spacing="6">GDF</text>
+</svg>

@@ -70,7 +70,7 @@ export function MeetingsManager({ orgId, meetings, configured }: { orgId: string
               <li key={m.id} className="flex items-center justify-between rounded-md border border-border bg-surface/50 px-4 py-3">
                 <div>
                   <p className="font-semibold">{m.room_name}</p>
-                  <p className="text-xs text-muted">{new Date(m.scheduled_at).toLocaleString()}</p>
+                  <p className="text-xs text-muted">{m.scheduled_at.slice(0, 16).replace('T', ' ')} UTC</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <StatusPill status={m.status} />

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireOrgStaffById } from '@/lib/server/auth';
 import { issueCredential } from '@/lib/server/credentials';
+import { sendCredentialEmail } from '@/lib/server/email';
 import { clientKey, rateLimit } from '@/lib/server/ratelimit';
 import { supabaseAdmin } from '@/lib/supabase/server';
 
@@ -35,29 +36,42 @@ export async function POST(request: Request) {
   const admin = supabaseAdmin();
   const { data: template } = await admin
     .from('badge_templates')
-    .select('id, org_id')
+    .select('id, org_id, name')
     .eq('id', parsed.data.template_id)
     .maybeSingle();
   if (!template || (template.org_id !== null && template.org_id !== ctx.org.id)) {
     return NextResponse.json({ error: 'Unknown badge template' }, { status: 400 });
   }
+  const origin = new URL(request.url).origin;
 
   const results = [];
   const failures = [];
   for (const recipient of parsed.data.recipients) {
     try {
-      results.push(
-        await issueCredential(admin, {
-          type: 'badge',
-          orgId: ctx.org.id,
-          templateId: parsed.data.template_id,
-          recipientEmail: recipient.email,
-          recipientName: recipient.name,
-          fields: recipient.fields,
-          eventName: parsed.data.event_name,
-          issuedBy: ctx.session.userId,
-        }),
-      );
+      const issued = await issueCredential(admin, {
+        type: 'badge',
+        orgId: ctx.org.id,
+        // template.id (from the DB row) — not the client string — so the
+        // signed value matches storage exactly
+        templateId: template.id,
+        recipientEmail: recipient.email,
+        recipientName: recipient.name,
+        fields: recipient.fields,
+        eventName: parsed.data.event_name,
+        issuedBy: ctx.session.userId,
+      });
+      results.push(issued);
+      // Best-effort notification — never fails the issuance.
+      void sendCredentialEmail({
+        to: issued.recipient_email,
+        recipientName: recipient.name,
+        templateName: template.name ?? 'Badge',
+        eventName: parsed.data.event_name,
+        orgName: ctx.org.name,
+        verifyUrl: `${origin}/verify/${issued.verification_code}`,
+        claimUrl: `${origin}/signup`,
+        alreadyClaimed: issued.status === 'claimed',
+      });
     } catch (error) {
       failures.push({ email: recipient.email, error: (error as Error).message });
     }

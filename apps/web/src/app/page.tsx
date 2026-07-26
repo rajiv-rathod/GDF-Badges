@@ -64,8 +64,12 @@ export default function Home() {
           ))}
         </section>
 
-        <footer className="mt-28 border-t border-border pt-6 text-sm text-muted">
-          {brand.org} — a free gift to the Model UN community.
+        <footer className="mt-28 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-6 text-sm text-muted">
+          <span>{brand.org} — a free gift to the Model UN community.</span>
+          <span className="flex gap-4">
+            <a href="/privacy" className="hover:text-foreground">Privacy</a>
+            <a href="/terms" className="hover:text-foreground">Terms</a>
+          </span>
         </footer>
       </div>
     </main>

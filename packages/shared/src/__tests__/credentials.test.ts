@@ -110,7 +110,7 @@ describe('claim semantics', () => {
 });
 
 describe('Open Badges 3.0 output', () => {
-  it('embeds an independently verifiable proof', () => {
+  it('redacts the recipient email and stays verifiable by the credential holder', () => {
     const cred = sampleCredential();
     const sig = signCredential(cred, keys.privateKey);
     const ob3 = buildOpenBadgeCredential({
@@ -124,8 +124,18 @@ describe('Open Badges 3.0 output', () => {
       baseUrl: 'https://certview.gdf.social',
     });
     expect(ob3.type).toContain('OpenBadgeCredential');
+
+    // The raw email must not appear anywhere in the public document.
+    expect(JSON.stringify(ob3)).not.toContain(cred.recipient_email);
+    expect(ob3.credentialSubject.identifier[0].identityHash).toMatch(/^sha256\$[0-9a-f]{64}$/);
+
+    // Holder-side verification: substitute the known email back into the
+    // redacted canonical form, then check the proof.
     const canonical = ob3.credentialSubject.achievement['gdf:canonical'];
     const proof = ob3.proof[0];
-    expect(verifyCredentialSignature(canonical, proof.proofValue, proof['gdf:publicKeyDerBase64'])).toBe(true);
+    const restored = { ...canonical, recipient_email: cred.recipient_email };
+    expect(verifyCredentialSignature(restored, proof.proofValue, proof['gdf:publicKeyDerBase64'])).toBe(true);
+    // The redacted form itself must NOT verify (it is not what was signed).
+    expect(verifyCredentialSignature(canonical, proof.proofValue, proof['gdf:publicKeyDerBase64'])).toBe(false);
   });
 });

@@ -12,6 +12,11 @@ function signingKey(): string {
   return key;
 }
 
+/** Escape ILIKE wildcards so emails match literally (% and _ are wildcards otherwise). */
+export function escapeIlike(value: string): string {
+  return value.replace(/([\\%_])/g, '\\$1');
+}
+
 export interface IssueInput {
   type: 'badge' | 'certificate';
   orgId: string;
@@ -45,8 +50,10 @@ export async function issueCredential(admin: SupabaseClient, input: IssueInput):
   const canonical: CanonicalCredential = {
     id,
     type: input.type,
-    org_id: input.orgId,
-    template_id: input.templateId,
+    // Lowercased so the signed values byte-match what Postgres stores and
+    // what verification reconstructs (uuid columns normalize to lowercase).
+    org_id: input.orgId.toLowerCase(),
+    template_id: input.templateId.toLowerCase(),
     recipient_email: email,
     recipient_name: input.recipientName.trim(),
     fields_json: input.fields,
@@ -56,8 +63,9 @@ export async function issueCredential(admin: SupabaseClient, input: IssueInput):
   };
   const signature = signCredential(canonical, signingKey());
 
-  // Auto-claim if this email already belongs to an account.
-  const { data: existing } = await admin.from('profiles').select('id').ilike('email', email).maybeSingle();
+  // Auto-claim if this email already belongs to an account (wildcards escaped
+  // so an address like a_b@x.org can never match a different account).
+  const { data: existing } = await admin.from('profiles').select('id').ilike('email', escapeIlike(email)).maybeSingle();
 
   const { error } = await admin.from('credentials').insert({
     ...canonical,

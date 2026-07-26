@@ -32,7 +32,12 @@ export function CredentialsTable({ credentials }: { credentials: Row[] }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'revoke' }),
     });
-    if (res.ok) setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, status: 'revoked' } : r)));
+    if (res.ok) {
+      setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, status: 'revoked' } : r)));
+    } else {
+      const data = await res.json().catch(() => ({}));
+      window.alert(`Revoke failed: ${data.error ?? res.statusText}`);
+    }
   }
 
   async function copyLink(row: Row) {
@@ -81,7 +86,7 @@ export function CredentialsTable({ credentials }: { credentials: Row[] }) {
                   </td>
                   <td className="px-4 py-3 capitalize">{r.type}</td>
                   <td className="px-4 py-3">{r.event_name}</td>
-                  <td className="px-4 py-3 text-muted">{new Date(r.issued_at).toLocaleDateString()}</td>
+                  <td className="px-4 py-3 text-muted">{r.issued_at.slice(0, 10)}</td>
                   <td className="px-4 py-3">
                     <StatusPill status={r.status} />
                   </td>

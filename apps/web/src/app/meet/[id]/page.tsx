@@ -44,11 +44,13 @@ export default async function MeetPage({ params }: { params: Promise<{ id: strin
     .maybeSingle();
   let authorized = Boolean(staff);
   if (!authorized) {
+    await admin.rpc('claim_pending_credentials', { p_email: session.email, p_user: session.userId });
     const { data: credential } = await admin
       .from('credentials')
       .select('id')
       .eq('org_id', meeting.org_id)
-      .or(`recipient_user_id.eq.${session.userId},recipient_email.ilike.${session.email}`)
+      .neq('status', 'revoked')
+      .eq('recipient_user_id', session.userId)
       .limit(1)
       .maybeSingle();
     authorized = Boolean(credential);

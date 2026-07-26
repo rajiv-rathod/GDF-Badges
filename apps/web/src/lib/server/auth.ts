@@ -1,5 +1,5 @@
 import type { Profile } from '@gdf/shared';
-import { supabaseAdmin, supabaseServer } from '@/lib/supabase/server';
+import { supabaseAdmin, supabaseConfigured, supabaseServer } from '@/lib/supabase/server';
 
 export interface SessionInfo {
   userId: string;
@@ -7,8 +7,9 @@ export interface SessionInfo {
   profile: Profile;
 }
 
-/** Current signed-in user + profile, or null. */
+/** Current signed-in user + profile, or null. Null (not a throw) when Supabase env is absent. */
 export async function getSession(): Promise<SessionInfo | null> {
+  if (!supabaseConfigured) return null;
   const supabase = await supabaseServer();
   const {
     data: { user },

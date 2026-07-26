@@ -120,6 +120,16 @@ returns boolean language sql stable security definer set search_path = public as
   );
 $$;
 
+-- Security definer (not an inline subquery) so org_members policies never
+-- reference org_members recursively.
+create or replace function public.is_org_admin(p_org uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from public.org_members
+    where org_id = p_org and user_id = auth.uid() and role_in_org in ('owner', 'admin')
+  );
+$$;
+
 -- Claim-by-email: link every credential issued to this email to the user.
 create or replace function public.claim_pending_credentials(p_email text, p_user uuid)
 returns integer language plpgsql security definer set search_path = public as $$
@@ -217,6 +227,29 @@ begin
 end;
 $$;
 
+-- Member wallet: everything claimed by the calling user, with issuer/template
+-- names joined server-side (members cannot read organizations/badge_templates
+-- of other orgs directly, so the join must happen in a definer function).
+create or replace function public.get_my_wallet()
+returns jsonb language sql stable security definer set search_path = public as $$
+  select coalesce((
+    select jsonb_agg(jsonb_build_object(
+      'id', c.id, 'type', c.type, 'recipient_name', c.recipient_name,
+      'event_name', c.event_name, 'issued_at', c.issued_at, 'status', c.status,
+      'verification_code', c.verification_code, 'asset_url', c.asset_url,
+      'is_public', c.is_public,
+      'org_name', o.name,
+      'template_name', coalesce(b.name, ct.name, c.type),
+      'template_image', b.image_url
+    ) order by c.issued_at desc)
+    from public.credentials c
+    join public.organizations o on o.id = c.org_id
+    left join public.badge_templates b on b.id = c.template_id and c.type = 'badge'
+    left join public.certificate_templates ct on ct.id = c.template_id and c.type = 'certificate'
+    where c.recipient_user_id = auth.uid()
+  ), '[]'::jsonb);
+$$;
+
 -- Public profile: /u/{slug} — profile basics + their PUBLIC credentials only.
 create or replace function public.get_public_profile(p_slug text)
 returns jsonb language sql stable security definer set search_path = public as $$
@@ -258,9 +291,13 @@ alter table public.delegates enable row level security;
 alter table public.meetings enable row level security;
 alter table public.credential_events enable row level security;
 
--- profiles: you see and edit yourself (public lookups go through the definer fn)
+-- profiles: you see and edit yourself (public lookups go through the definer fn).
+-- Column grants stop clients from rewriting role/email/slug — only display
+-- fields are self-editable; everything else changes server-side only.
 create policy "profiles self select" on public.profiles for select using (id = auth.uid());
 create policy "profiles self update" on public.profiles for update using (id = auth.uid());
+revoke update on public.profiles from anon, authenticated;
+grant update (full_name, avatar_url) on public.profiles to authenticated;
 
 -- organizations: staff read; owner updates; any authenticated user may create
 create policy "orgs staff select" on public.organizations for select using (public.is_org_staff(id));
@@ -270,11 +307,8 @@ create policy "orgs insert own" on public.organizations for insert
 
 -- org_members: visible to fellow staff; owners/admins manage
 create policy "org members select" on public.org_members for select using (public.is_org_staff(org_id));
-create policy "org members manage" on public.org_members for all using (
-  exists (select 1 from public.org_members m
-          where m.org_id = org_members.org_id and m.user_id = auth.uid()
-            and m.role_in_org in ('owner', 'admin'))
-);
+create policy "org members manage" on public.org_members for all
+  using (public.is_org_admin(org_id)) with check (public.is_org_admin(org_id));
 
 -- badge templates: global ones visible to all signed-in users; org ones to staff
 create policy "badge templates select" on public.badge_templates for select
@@ -305,6 +339,7 @@ create policy "meetings staff all" on public.meetings for all
 create policy "meetings member select" on public.meetings for select using (
   exists (select 1 from public.credentials c
           where c.org_id = meetings.org_id
+            and c.status <> 'revoked'
             and (c.recipient_user_id = auth.uid()
                  or lower(c.recipient_email) = lower(coalesce(auth.jwt() ->> 'email', ''))))
 );
@@ -325,7 +360,7 @@ insert into storage.buckets (id, name, public) values
   ('certs', 'certs', true)
 on conflict (id) do nothing;
 
-create policy "assets authenticated upload" on storage.objects for insert
-  to authenticated with check (bucket_id = 'assets');
+-- No client upload policies: ALL writes to both buckets go through the app's
+-- API routes with the service role (which bypasses RLS) after authz checks.
 create policy "assets public read" on storage.objects for select using (bucket_id = 'assets');
 create policy "certs public read" on storage.objects for select using (bucket_id = 'certs');

@@ -83,58 +83,69 @@ export function Designer({ orgId, orgSlug, template }: { orgId: string; orgSlug:
   async function uploadBackground(file: File) {
     setBusy('upload');
     setError('');
-    const form = new FormData();
-    form.set('org_id', orgId);
-    form.set('file', file);
-    const res = await fetch('/api/upload', { method: 'POST', body: form });
-    const data = await res.json();
-    setBusy('');
-    if (!res.ok) {
-      setError(data.error ?? 'Upload failed');
-      return;
+    try {
+      const form = new FormData();
+      form.set('org_id', orgId);
+      form.set('file', file);
+      const res = await fetch('/api/upload', { method: 'POST', body: form });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Upload failed');
+      setDraft((d) => ({ ...d, background_url: data.url }));
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy('');
     }
-    setDraft((d) => ({ ...d, background_url: data.url }));
   }
 
   async function save(): Promise<string | null> {
     setBusy('save');
     setError('');
-    const res = await fetch('/api/certificates/templates', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...draft, id: draft.id ?? undefined, org_id: orgId }),
-    });
-    const data = await res.json();
-    setBusy('');
-    if (!res.ok) {
-      setError(data.error ?? 'Save failed');
+    try {
+      const res = await fetch('/api/certificates/templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...draft, id: draft.id ?? undefined, org_id: orgId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Save failed');
+      setDraft((d) => ({ ...d, id: data.id }));
+      return data.id;
+    } catch (err) {
+      setError((err as Error).message);
       return null;
+    } finally {
+      setBusy('');
     }
-    setDraft((d) => ({ ...d, id: data.id }));
-    return data.id;
   }
 
   async function preview() {
     setBusy('preview');
     setError('');
-    const res = await fetch('/api/certificates/preview', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        org_id: orgId,
-        background_url: draft.background_url,
-        layout_json: draft.layout_json,
-        page_size: draft.page_size,
-        values: {},
-      }),
-    });
-    setBusy('');
-    if (!res.ok) {
-      setError('Preview failed');
-      return;
+    // Open the tab synchronously so popup blockers allow it, fill it after.
+    const tab = window.open('about:blank', '_blank');
+    try {
+      const res = await fetch('/api/certificates/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          org_id: orgId,
+          background_url: draft.background_url,
+          layout_json: draft.layout_json,
+          page_size: draft.page_size,
+          values: {},
+        }),
+      });
+      if (!res.ok) throw new Error('Preview failed');
+      const url = URL.createObjectURL(await res.blob());
+      if (tab) tab.location.href = url;
+      else window.location.href = url;
+    } catch (err) {
+      tab?.close();
+      setError((err as Error).message);
+    } finally {
+      setBusy('');
     }
-    const blob = await res.blob();
-    window.open(URL.createObjectURL(blob), '_blank');
   }
 
   async function saveAndBulk() {
@@ -156,7 +167,16 @@ export function Designer({ orgId, orgSlug, template }: { orgId: string; orgSlug:
             <option key={p} value={p}>{p}</option>
           ))}
         </select>
-        <input ref={fileInput} type="file" accept="image/png,image/jpeg" className="hidden" onChange={(e) => e.target.files?.[0] && uploadBackground(e.target.files[0])} />
+        <input
+          ref={fileInput}
+          type="file"
+          accept="image/png,image/jpeg"
+          className="hidden"
+          onChange={(e) => {
+            if (e.target.files?.[0]) uploadBackground(e.target.files[0]);
+            e.target.value = '';
+          }}
+        />
         <button className={buttonClass.outline} onClick={() => fileInput.current?.click()} disabled={busy !== ''}>
           {busy === 'upload' ? 'Uploading…' : 'Upload background'}
         </button>
@@ -241,6 +261,8 @@ export function Designer({ orgId, orgSlug, template }: { orgId: string; orgSlug:
                     value={selected.key}
                     onChange={(e) => {
                       const key = e.target.value.replace(/[^a-zA-Z0-9_]/g, '_');
+                      // Two fields with one key would merge — refuse collisions.
+                      if (!key || draft.layout_json.some((f) => f.key === key && f.key !== selected.key)) return;
                       updateField(selected.key, { key });
                       setSelectedKey(key);
                     }}

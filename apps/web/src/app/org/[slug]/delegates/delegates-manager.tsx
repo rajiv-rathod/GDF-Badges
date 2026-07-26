@@ -146,7 +146,10 @@ export function DelegatesManager({
           type="file"
           accept=".xlsx,.xls,.csv"
           className="hidden"
-          onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])}
+          onChange={(e) => {
+            if (e.target.files?.[0]) onFile(e.target.files[0]);
+            e.target.value = '';
+          }}
         />
         <button className={buttonClass.primary} onClick={() => fileInput.current?.click()}>
           Import sheet (XLSX / CSV)

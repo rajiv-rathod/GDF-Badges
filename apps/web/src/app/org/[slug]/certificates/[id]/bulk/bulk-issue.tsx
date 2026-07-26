@@ -51,9 +51,15 @@ export function BulkIssue({ orgId, template, aiEnabled }: { orgId: string; templ
     setResults([]);
     try {
       const workbook = XLSX.read(await file.arrayBuffer());
-      const parsed = XLSX.utils.sheet_to_json<Record<string, unknown>>(workbook.Sheets[workbook.SheetNames[0]]);
+      // raw:false → dates/numbers arrive as their formatted display strings
+      // (no Excel serial numbers on certificates); defval keeps blank cells.
+      const parsed = XLSX.utils.sheet_to_json<Record<string, unknown>>(workbook.Sheets[workbook.SheetNames[0]], {
+        raw: false,
+        defval: '',
+      });
       if (parsed.length === 0) throw new Error('That sheet has no data rows.');
-      const cols = Object.keys(parsed[0]);
+      // Union of keys across ALL rows — a column blank in row 1 still counts.
+      const cols = [...new Set(parsed.flatMap((r) => Object.keys(r)))];
       setColumns(cols);
       setRows(parsed.map((r) => Object.fromEntries(cols.map((c) => [c, String(r[c] ?? '').trim()]))));
 
@@ -172,7 +178,16 @@ export function BulkIssue({ orgId, template, aiEnabled }: { orgId: string; templ
   return (
     <>
       <PageTitle title={`Bulk issue — ${template.name}`} subtitle="Import your sheet, map its columns to the certificate fields, preview, then issue." />
-      <input ref={fileInput} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])} />
+      <input
+        ref={fileInput}
+        type="file"
+        accept=".xlsx,.xls,.csv"
+        className="hidden"
+        onChange={(e) => {
+          if (e.target.files?.[0]) onFile(e.target.files[0]);
+          e.target.value = '';
+        }}
+      />
       <div className="flex flex-wrap items-center gap-3">
         <button className={buttonClass.primary} onClick={() => fileInput.current?.click()} disabled={busy !== ''}>
           1 · Import sheet
