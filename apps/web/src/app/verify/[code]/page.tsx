@@ -53,7 +53,7 @@ export default async function VerifyPage({ params }: { params: Promise<{ code: s
               revoked
                 ? 'border-danger bg-danger/10 text-danger'
                 : !keyConfigured
-                  ? 'border-primary bg-primary/10 text-accent'
+                  ? 'border-primary bg-primary/10 text-primary-dark'
                   : authentic
                     ? 'border-success bg-success/10 text-success'
                     : 'border-danger bg-danger/10 text-danger'
@@ -69,7 +69,7 @@ export default async function VerifyPage({ params }: { params: Promise<{ code: s
           </div>
 
           <Card className="mt-6">
-            <p className="text-xs uppercase tracking-[0.25em] text-accent">{data.type}</p>
+            <p className="text-xs uppercase tracking-[0.25em] text-primary-dark">{data.type}</p>
             <h1 className="mt-2 font-display text-3xl font-bold">{data.template_name}</h1>
             <p className="mt-1 text-muted">{data.event_name}</p>
 
@@ -107,11 +107,11 @@ export default async function VerifyPage({ params }: { params: Promise<{ code: s
 
             <div className="mt-6 flex flex-wrap gap-4 border-t border-border pt-4 text-sm">
               {data.asset_url ? (
-                <a className="font-semibold text-accent hover:underline" href={data.asset_url} target="_blank" rel="noreferrer">
+                <a className="font-semibold text-primary-dark hover:underline" href={data.asset_url} target="_blank" rel="noreferrer">
                   View certificate PDF
                 </a>
               ) : null}
-              <Link className="font-semibold text-accent hover:underline" href={`/api/verify/${code}?format=ob3`}>
+              <Link className="font-semibold text-primary-dark hover:underline" href={`/api/verify/${code}?format=ob3`}>
                 Open Badges 3.0 JSON
               </Link>
             </div>

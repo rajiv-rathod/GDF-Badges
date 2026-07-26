@@ -210,7 +210,7 @@ export function BulkIssue({ orgId, template, aiEnabled }: { orgId: string; templ
             <div className="mt-4 grid gap-3">
               {targets.map((target) => (
                 <label key={target} className="grid grid-cols-2 items-center gap-3 text-sm">
-                  <span className={target === EMAIL_KEY ? 'font-semibold text-accent' : ''}>
+                  <span className={target === EMAIL_KEY ? 'font-semibold text-primary-dark' : ''}>
                     {target === EMAIL_KEY ? 'Recipient email (required)' : target}
                   </span>
                   <select
@@ -263,7 +263,7 @@ export function BulkIssue({ orgId, template, aiEnabled }: { orgId: string; templ
               <li key={i} className="flex items-center justify-between border-b border-border/40 py-1.5">
                 <span className={r.ok ? '' : 'text-danger'}>{r.email}</span>
                 {r.ok ? (
-                  <Link className="font-semibold text-accent hover:underline" href={`/verify/${r.verification_code}`}>
+                  <Link className="font-semibold text-primary-dark hover:underline" href={`/verify/${r.verification_code}`}>
                     Verify link
                   </Link>
                 ) : (

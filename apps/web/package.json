@@ -13,7 +13,6 @@
     "@gdf/shared": "*",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.49.0",
-    "jose": "^5.9.6",
     "next": "^15.1.6",
     "pdf-lib": "^1.17.1",
     "react": "19.1.0",

@@ -1,12 +1,12 @@
 export const dynamic = 'force-dynamic';
 
 import { redirect } from 'next/navigation';
+import { brand } from '@gdf/shared';
 import { AppNav } from '@/components/nav';
 import { EmptyState, ErrorBox, PageTitle } from '@/components/ui';
 import { getSession } from '@/lib/server/auth';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { WalletGrid, type WalletCredential } from './wallet-grid';
-import Link from 'next/link';
 
 export default async function WalletPage() {
   const session = await getSession();
@@ -14,7 +14,6 @@ export default async function WalletPage() {
 
   const admin = supabaseAdmin();
   let credentials: WalletCredential[] = [];
-  let meetings: Array<{ id: string; room_name: string; scheduled_at: string; status: string; org_name: string }> = [];
   let loadError = '';
   try {
     // Link anything issued to this email first, then query strictly by user id
@@ -47,23 +46,6 @@ export default async function WalletPage() {
       template_name: templateById.get(c.template_id)?.name ?? (c.type === 'badge' ? 'Badge' : 'Certificate'),
       template_image: templateById.get(c.template_id)?.image_url ?? null,
     }));
-
-    const orgIds = [...new Set((data ?? []).map((c) => c.org_id))];
-    if (orgIds.length) {
-      const { data: m } = await admin
-        .from('meetings')
-        .select('id, room_name, scheduled_at, status, organizations(name)')
-        .in('org_id', orgIds)
-        .neq('status', 'ended')
-        .order('scheduled_at');
-      meetings = (m ?? []).map((row) => ({
-        id: row.id,
-        room_name: row.room_name,
-        scheduled_at: row.scheduled_at,
-        status: row.status,
-        org_name: (row.organizations as unknown as { name: string } | null)?.name ?? '',
-      }));
-    }
   } catch (error) {
     loadError = (error as Error).message;
   }
@@ -87,26 +69,20 @@ export default async function WalletPage() {
           <WalletGrid credentials={credentials} />
         )}
 
-        {meetings.length > 0 ? (
-          <section className="mt-12">
-            <h2 className="font-display text-xl font-semibold">Your conferences&apos; meetings</h2>
-            <ul className="mt-4 grid gap-3 sm:grid-cols-2">
-              {meetings.map((m) => (
-                <li key={m.id} className="flex items-center justify-between rounded-md border border-border bg-surface/50 px-4 py-3">
-                  <div>
-                    <p className="font-semibold">{m.room_name}</p>
-                    <p className="text-xs text-muted">
-                      {m.org_name} · {new Date(m.scheduled_at).toLocaleString()}
-                    </p>
-                  </div>
-                  <Link href={`/meet/${m.id}`} className="text-sm font-semibold text-accent hover:underline">
-                    Join
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
+        <section className="mt-12 flex flex-wrap items-center justify-between gap-4 rounded-lg border border-border bg-surface/80 p-6">
+          <div>
+            <h2 className="font-display text-lg font-semibold">Conference meetings</h2>
+            <p className="mt-1 text-sm text-muted">Committee sessions run in the GDF meeting app.</p>
+          </div>
+          <a
+            href={brand.meetingAppUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="gdf-cta-gradient rounded-sm px-6 py-2.5 font-display font-semibold text-white transition hover:opacity-90"
+          >
+            Launch meeting app ↗
+          </a>
+        </section>
       </main>
     </>
   );

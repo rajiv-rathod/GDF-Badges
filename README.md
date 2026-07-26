@@ -3,7 +3,7 @@
 A **free**, Credly-style credentialing + all-in-one conference platform for
 Model UN, built by the **Global Diplomacy Forum**. Organizers issue verifiable
 badges and certificates to delegates; members claim, collect, verify, and share
-them — with self-hosted Jitsi video meetings built in.
+them — with committee sessions one click away in the GDF meeting app.
 
 ## What's implemented
 
@@ -25,8 +25,8 @@ them — with self-hosted Jitsi video meetings built in.
   shareable `/u/{slug}` profile, PDF downloads.
 - **Organizer dashboard** — roster import/export (XLSX), issued-credentials
   table with filters + revoke, claim analytics.
-- **Meetings** — JWT-authed self-hosted Jitsi rooms; staff moderate, credential
-  holders join in-app at `/meet/{id}`.
+- **Meetings** — committee sessions run in the external GDF meeting app
+  (meet.apextech.llc); "Launch meeting app" buttons throughout.
 - **Gemini AI (feature-flagged)** — award-citation drafting, delegate-sheet
   cleanup, organizer help assistant. Absent key = features hidden, nothing breaks.
 - **Android app** (`apps/mobile`, Expo) — member wallet: sign in, auto-claim,
@@ -63,8 +63,8 @@ node scripts/generate-signing-keys.mjs     # signing keys → .env.local
 4. Mobile: copy `apps/mobile/.env.example` → `apps/mobile/.env`, then
    `npm run mobile` (Expo Go) or build an APK with EAS.
 
-Deployment (Vercel + managed Supabase recommended; notes for running the web
-app on a 1 GB Oracle VM next to Jitsi): see `docs/DEPLOYMENT.md`.
+Deployment (Vercel + managed Supabase recommended; notes for self-hosting on
+a small VM): see `docs/DEPLOYMENT.md`. Go-live runbook: `docs/RELEASE.md`.
 
 ## Brand
 

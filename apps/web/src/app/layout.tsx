@@ -14,7 +14,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={`${spaceGrotesk.variable} ${inter.variable}`}>{children}</body>
+      <body className={`${spaceGrotesk.variable} ${inter.variable}`}>
+        <div className="gdf-backdrop" aria-hidden />
+        {children}
+      </body>
     </html>
   );
 }

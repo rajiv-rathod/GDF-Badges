@@ -92,7 +92,7 @@ export function CredentialsTable({ credentials }: { credentials: Row[] }) {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-3 text-xs">
-                      <Link className="font-semibold text-accent hover:underline" href={`/verify/${r.verification_code}`}>
+                      <Link className="font-semibold text-primary-dark hover:underline" href={`/verify/${r.verification_code}`}>
                         Verify
                       </Link>
                       <button className="font-semibold text-muted hover:text-foreground" onClick={() => copyLink(r)}>

@@ -64,12 +64,12 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
                     {c.template_image ? (
                       <Image src={c.template_image} alt="" width={56} height={56} />
                     ) : (
-                      <div className="flex h-14 w-14 items-center justify-center rounded-md border border-primary/50 text-xs font-bold text-accent">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-md border border-primary/50 text-xs font-bold text-primary-dark">
                         CERT
                       </div>
                     )}
                     <div>
-                      <p className="font-display font-semibold group-hover:text-accent">{c.template_name}</p>
+                      <p className="font-display font-semibold group-hover:text-primary-dark">{c.template_name}</p>
                       <p className="text-sm text-muted">
                         {c.event_name} · {c.org_name}
                       </p>

@@ -42,10 +42,10 @@ export default async function CertificateTemplatesPage({ params }: { params: Pro
                 <p className="font-display font-semibold">{t.name}</p>
                 <p className="text-xs text-muted">{t.page_size}</p>
                 <div className="mt-3 flex gap-4 text-sm">
-                  <Link className="font-semibold text-accent hover:underline" href={`/org/${slug}/certificates/${t.id}`}>
+                  <Link className="font-semibold text-primary-dark hover:underline" href={`/org/${slug}/certificates/${t.id}`}>
                     Edit design
                   </Link>
-                  <Link className="font-semibold text-accent hover:underline" href={`/org/${slug}/certificates/${t.id}/bulk`}>
+                  <Link className="font-semibold text-primary-dark hover:underline" href={`/org/${slug}/certificates/${t.id}/bulk`}>
                     Bulk issue
                   </Link>
                 </div>

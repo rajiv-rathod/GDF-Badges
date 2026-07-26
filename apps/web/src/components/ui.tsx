@@ -20,7 +20,7 @@ export const buttonClass = {
   primary:
     'gdf-cta-gradient inline-flex items-center justify-center rounded-sm px-5 py-2.5 font-display font-semibold text-background transition hover:opacity-90 disabled:opacity-40',
   outline:
-    'inline-flex items-center justify-center rounded-sm border border-primary px-5 py-2.5 font-display font-semibold text-foreground transition hover:bg-surface disabled:opacity-40',
+    'inline-flex items-center justify-center rounded-sm border border-primary px-5 py-2.5 font-display font-semibold text-primary-dark transition hover:bg-primary/10 disabled:opacity-40',
   danger:
     'inline-flex items-center justify-center rounded-sm border border-danger px-4 py-1.5 text-sm font-semibold text-danger transition hover:bg-danger/10 disabled:opacity-40',
   ghost:
@@ -29,12 +29,9 @@ export const buttonClass = {
 
 export function StatusPill({ status }: { status: string }) {
   const styles: Record<string, string> = {
-    issued: 'bg-primary/20 text-accent border-primary/40',
-    claimed: 'bg-success/15 text-success border-success/40',
-    revoked: 'bg-danger/15 text-danger border-danger/50',
-    scheduled: 'bg-primary/20 text-accent border-primary/40',
-    live: 'bg-success/15 text-success border-success/40',
-    ended: 'bg-border/40 text-muted border-border',
+    issued: 'bg-primary/15 text-primary-dark border-primary/40',
+    claimed: 'bg-success/10 text-success border-success/40',
+    revoked: 'bg-danger/10 text-danger border-danger/50',
   };
   return (
     <span className={`inline-block rounded-full border px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide ${styles[status] ?? 'text-muted border-border'}`}>

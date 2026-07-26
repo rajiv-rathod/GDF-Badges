@@ -39,7 +39,7 @@ export default async function OrgOverviewPage({ params }: { params: Promise<{ sl
       <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-5">
         {stats.map((s) => (
           <Card key={s.label} className="!p-4 text-center">
-            <p className="font-display text-3xl font-bold text-accent">{s.value}</p>
+            <p className="font-display text-3xl font-bold text-primary-dark">{s.value}</p>
             <p className="mt-1 text-xs uppercase tracking-wide text-muted">{s.label}</p>
           </Card>
         ))}
@@ -51,7 +51,7 @@ export default async function OrgOverviewPage({ params }: { params: Promise<{ sl
           { href: `/org/${slug}/certificates`, title: 'Design certificates', body: 'Upload your background, drag the fields, bulk-issue signed PDFs.' },
         ].map((c) => (
           <Link key={c.href} href={c.href} className="rounded-lg border border-border bg-surface/50 p-5 transition hover:border-primary">
-            <p className="font-display font-semibold text-accent">{c.title}</p>
+            <p className="font-display font-semibold text-primary-dark">{c.title}</p>
             <p className="mt-1 text-sm text-muted">{c.body}</p>
           </Link>
         ))}

@@ -51,7 +51,7 @@ export function WalletGrid({ credentials }: { credentials: WalletCredential[] })
             {c.template_image ? (
               <Image src={c.template_image} alt="" width={64} height={64} className="shrink-0" />
             ) : (
-              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-md border border-primary/50 text-xs font-bold text-accent">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-md border border-primary/50 text-xs font-bold text-primary-dark">
                 PDF
               </div>
             )}
@@ -63,11 +63,11 @@ export function WalletGrid({ credentials }: { credentials: WalletCredential[] })
           </p>
           <p className="mt-1 text-xs text-muted">Issued {c.issued_at.slice(0, 10)}</p>
           <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-border pt-3 text-sm">
-            <Link className="font-semibold text-accent hover:underline" href={`/verify/${c.verification_code}`}>
+            <Link className="font-semibold text-primary-dark hover:underline" href={`/verify/${c.verification_code}`}>
               Verify
             </Link>
             {c.asset_url ? (
-              <a className="font-semibold text-accent hover:underline" href={c.asset_url} target="_blank" rel="noreferrer">
+              <a className="font-semibold text-primary-dark hover:underline" href={c.asset_url} target="_blank" rel="noreferrer">
                 Download
               </a>
             ) : null}

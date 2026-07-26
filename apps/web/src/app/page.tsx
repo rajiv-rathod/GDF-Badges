@@ -9,35 +9,43 @@ export default function Home() {
 
       <div className="relative mx-auto flex max-w-5xl flex-col px-6 py-10">
         <header className="flex items-center justify-between">
-          <Image src="/gdf-logo.svg" alt="GDF — Global Diplomacy Forum" width={240} height={48} priority />
-          <span className="rounded-sm border border-border bg-surface/60 px-3 py-1 text-xs uppercase tracking-widest text-muted">
+          <Image src="/gdf-logo.svg" alt="GDF — Global Diplomacy Forum" width={240} height={54} priority />
+          <span className="rounded-sm border border-border bg-surface/70 px-3 py-1 text-xs uppercase tracking-widest text-muted">
             Free for MUNs
           </span>
         </header>
 
         <section className="mt-24 max-w-3xl">
-          <p className="font-display text-sm uppercase tracking-[0.3em] text-accent">{brand.poweredBy}</p>
+          <p className="font-display text-sm uppercase tracking-[0.3em] text-primary-dark">{brand.poweredBy}</p>
           <h1 className="mt-4 font-display text-5xl font-bold leading-tight sm:text-6xl">
             {brand.name}
           </h1>
           <p className="mt-6 max-w-xl text-lg text-muted">
             {brand.tagline} Organizers issue verifiable badges and certificates;
-            delegates claim, collect, and share them — with conference meetings
-            built in.
+            delegates claim, collect, and share them — with your conference
+            meetings one click away.
           </p>
 
           <div className="mt-10 flex flex-wrap gap-4">
             <a
               href="/signup"
-              className="gdf-cta-gradient rounded-md px-7 py-3 font-display font-semibold text-background transition hover:opacity-90"
+              className="gdf-cta-gradient rounded-md px-7 py-3 font-display font-semibold text-white transition hover:opacity-90"
             >
               Issue credentials
             </a>
             <a
               href="/login"
-              className="rounded-md border border-primary px-7 py-3 font-display font-semibold text-foreground transition hover:bg-surface"
+              className="rounded-md border border-primary px-7 py-3 font-display font-semibold text-primary-dark transition hover:bg-primary/10"
             >
               Claim your badge
+            </a>
+            <a
+              href={brand.meetingAppUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-md border border-border bg-surface/70 px-7 py-3 font-display font-semibold text-foreground transition hover:border-primary"
+            >
+              Launch meeting app ↗
             </a>
           </div>
         </section>
@@ -53,19 +61,24 @@ export default function Home() {
               body: 'Design once, map a delegate sheet, and bulk-issue signed certificates in minutes.',
             },
             {
-              title: 'Your conference, one app',
-              body: 'Delegate rosters, awards, and self-hosted video meetings — no third-party tools needed.',
+              title: 'Your conference, one place',
+              body: 'Delegate rosters, awards, analytics — and committee sessions in the GDF meeting app.',
             },
           ].map((f) => (
-            <div key={f.title} className="rounded-lg border border-border bg-surface/50 p-6 backdrop-blur">
-              <h2 className="font-display text-lg font-semibold text-accent">{f.title}</h2>
+            <div key={f.title} className="rounded-lg border border-border bg-surface/80 p-6 shadow-sm">
+              <h2 className="font-display text-lg font-semibold text-primary-dark">{f.title}</h2>
               <p className="mt-2 text-sm leading-relaxed text-muted">{f.body}</p>
             </div>
           ))}
         </section>
 
         <footer className="mt-28 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-6 text-sm text-muted">
-          <span>{brand.org} — a free gift to the Model UN community.</span>
+          <span>
+            {brand.org} — a free gift to the Model UN community ·{' '}
+            <a href={`mailto:${brand.supportEmail}`} className="hover:text-foreground">
+              {brand.supportEmail}
+            </a>
+          </span>
           <span className="flex gap-4">
             <a href="/privacy" className="hover:text-foreground">Privacy</a>
             <a href="/terms" className="hover:text-foreground">Terms</a>
