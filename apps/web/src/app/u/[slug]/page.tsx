@@ -18,7 +18,30 @@ interface PublicCredential {
 
 export default async function PublicProfilePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const { data } = await supabaseAdmin().rpc('get_public_profile', { p_slug: slug });
+  const admin = supabaseAdmin();
+  const { data } = await admin.rpc('get_public_profile', { p_slug: slug });
+
+  // Skills wallet: aggregate skills across this member's public, claimed
+  // credentials (skills live comma-separated in fields_json.skills).
+  let skillWallet: string[] = [];
+  if (data) {
+    const { data: prof } = await admin.from('profiles').select('id').eq('public_slug', slug).maybeSingle();
+    if (prof?.id) {
+      const { data: creds } = await admin
+        .from('credentials')
+        .select('fields_json')
+        .eq('recipient_user_id', prof.id)
+        .eq('is_public', true)
+        .eq('status', 'claimed');
+      const set = new Set<string>();
+      for (const c of creds ?? []) {
+        String((c.fields_json as Record<string, string> | null)?.skills ?? '')
+          .split(',').map((s) => s.trim()).filter(Boolean)
+          .forEach((s) => set.add(s));
+      }
+      skillWallet = [...set].sort();
+    }
+  }
 
   if (!data) {
     return (
@@ -47,6 +70,17 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
               <p className="text-sm text-muted">Verified Model UN credentials · powered by GDF</p>
             </div>
           </div>
+
+          {skillWallet.length > 0 ? (
+            <div className="mt-8 rounded-lg border border-border bg-surface/70 p-5">
+              <p className="text-xs uppercase tracking-wide text-muted">Skills wallet</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {skillWallet.map((s) => (
+                  <span key={s} className="rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-sm font-semibold text-primary-dark">{s}</span>
+                ))}
+              </div>
+            </div>
+          ) : null}
 
           {credentials.length === 0 ? (
             <div className="mt-10">

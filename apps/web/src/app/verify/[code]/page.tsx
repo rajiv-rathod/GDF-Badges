@@ -3,6 +3,7 @@ import { AppNav } from '@/components/nav';
 import { Card, EmptyState } from '@/components/ui';
 import { type CanonicalCredential, verifyCredentialSignature } from '@gdf/shared/server';
 import { getSigningPublicKey } from '@/lib/server/signing';
+import { ShareBar } from '@/components/share-bar';
 import { supabaseAdmin } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
@@ -50,7 +51,12 @@ export default async function VerifyPage({ params }: { params: Promise<{ code: s
   const keyConfigured = publicKey.length > 0;
   const signatureValid = keyConfigured && verifyCredentialSignature(canonical, data.signature, publicKey);
   const revoked = data.status === 'revoked';
-  const authentic = signatureValid && !revoked;
+  const fields = (data.fields_json ?? {}) as Record<string, string>;
+  const expiresRaw = fields.expires?.trim();
+  const expired = Boolean(expiresRaw && !Number.isNaN(Date.parse(expiresRaw)) && Date.parse(expiresRaw) < Date.now());
+  const skills = (fields.skills ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+  const evidence = fields.evidence?.trim();
+  const authentic = signatureValid && !revoked && !expired;
 
   return (
     <>
@@ -60,7 +66,7 @@ export default async function VerifyPage({ params }: { params: Promise<{ code: s
         <div className="relative mx-auto max-w-3xl px-6 py-14">
           <div
             className={`rounded-lg border-2 p-5 text-center font-display text-lg font-bold ${
-              revoked
+              revoked || expired
                 ? 'border-danger bg-danger/10 text-danger'
                 : !keyConfigured
                   ? 'border-primary bg-primary/10 text-primary-dark'
@@ -71,11 +77,13 @@ export default async function VerifyPage({ params }: { params: Promise<{ code: s
           >
             {revoked
               ? '✕ REVOKED — this credential has been revoked by the issuer'
-              : !keyConfigured
-                ? '⚠ SIGNATURE CHECK UNAVAILABLE — the verification key is not configured on this server'
-                : authentic
-                  ? '✓ VERIFIED — authentic credential, signature valid'
-                  : '✕ SIGNATURE INVALID — this credential could not be verified'}
+              : expired
+                ? '⌛ EXPIRED — this credential is past its expiration date'
+                : !keyConfigured
+                  ? '⚠ SIGNATURE CHECK UNAVAILABLE — the verification key is not configured on this server'
+                  : authentic
+                    ? '✓ VERIFIED — authentic credential, signature valid'
+                    : '✕ SIGNATURE INVALID — this credential could not be verified'}
           </div>
 
           <Card className="mt-6">
@@ -98,23 +106,42 @@ export default async function VerifyPage({ params }: { params: Promise<{ code: s
               </div>
               <div>
                 <dt className="text-xs uppercase tracking-wide text-muted">Issued on</dt>
-                <dd className="mt-1">{new Date(data.issued_at).toLocaleDateString()}</dd>
+                <dd className="mt-1">{data.issued_at.slice(0, 10)}</dd>
               </div>
               <div>
-                <dt className="text-xs uppercase tracking-wide text-muted">Certificate ID</dt>
-                <dd className="mt-1 break-all font-mono text-sm">{data.verification_code}</dd>
+                <dt className="text-xs uppercase tracking-wide text-muted">{expiresRaw ? 'Expires' : 'Certificate ID'}</dt>
+                <dd className={`mt-1 ${expiresRaw ? (expired ? 'font-semibold text-danger' : '') : 'break-all font-mono text-sm'}`}>
+                  {expiresRaw ? `${expiresRaw.slice(0, 10)}${expired ? ' (expired)' : ''}` : data.verification_code}
+                </dd>
               </div>
             </dl>
 
-            <div className="mt-5 rounded-md border border-border bg-background/60 p-3">
-              <p className="text-xs uppercase tracking-wide text-muted">Public share link</p>
-              <p className="mt-1 break-all font-mono text-xs text-primary-dark">https://certview.gdf.social/verify/{data.verification_code}</p>
-            </div>
+            {skills.length > 0 ? (
+              <div className="mt-5">
+                <p className="text-xs uppercase tracking-wide text-muted">Skills</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {skills.map((s) => (
+                    <span key={s} className="rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary-dark">{s}</span>
+                  ))}
+                </div>
+              </div>
+            ) : null}
 
-            {Object.keys(data.fields_json ?? {}).length > 0 ? (
+            {evidence ? (
+              <div className="mt-5">
+                <p className="text-xs uppercase tracking-wide text-muted">Evidence</p>
+                {/^https?:\/\//.test(evidence) ? (
+                  <a className="mt-1 block break-all font-semibold text-primary-dark hover:underline" href={evidence} target="_blank" rel="noreferrer">{evidence}</a>
+                ) : (
+                  <p className="mt-1 text-sm">{evidence}</p>
+                )}
+              </div>
+            ) : null}
+
+            {Object.entries(fields).filter(([k]) => !['recipient_name', 'skills', 'evidence', 'expires'].includes(k)).length > 0 ? (
               <div className="mt-6 border-t border-border pt-4">
-                {Object.entries(data.fields_json as Record<string, string>)
-                  .filter(([k]) => k !== 'recipient_name')
+                {Object.entries(fields)
+                  .filter(([k]) => !['recipient_name', 'skills', 'evidence', 'expires'].includes(k))
                   .map(([k, v]) => (
                     <p key={k} className="text-sm">
                       <span className="text-muted">{k.replace(/_/g, ' ')}: </span>
@@ -123,6 +150,11 @@ export default async function VerifyPage({ params }: { params: Promise<{ code: s
                   ))}
               </div>
             ) : null}
+
+            <div className="mt-6 border-t border-border pt-4">
+              <p className="mb-2 text-xs uppercase tracking-wide text-muted">Certificate ID · <span className="font-mono normal-case text-primary-dark">{data.verification_code}</span></p>
+              <ShareBar code={data.verification_code} templateName={data.template_name} orgName={data.org_name} issuedAt={data.issued_at} />
+            </div>
 
             <div className="mt-6 flex flex-wrap gap-4 border-t border-border pt-4 text-sm">
               {data.asset_url ? (

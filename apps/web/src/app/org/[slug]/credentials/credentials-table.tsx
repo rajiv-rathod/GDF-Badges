@@ -18,10 +18,27 @@ interface Row {
 
 const FILTERS = ['all', 'issued', 'claimed', 'revoked'] as const;
 
-export function CredentialsTable({ credentials }: { credentials: Row[] }) {
+export function CredentialsTable({ credentials, orgId }: { credentials: Row[]; orgId: string }) {
   const [rows, setRows] = useState(credentials);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>('all');
   const [copied, setCopied] = useState('');
+  const [reminding, setReminding] = useState(false);
+  const [remindMsg, setRemindMsg] = useState('');
+
+  const unclaimed = rows.filter((r) => r.status === 'issued').length;
+
+  async function remindUnclaimed() {
+    setReminding(true);
+    setRemindMsg('');
+    const res = await fetch('/api/remind', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ org_id: orgId }),
+    });
+    const data = await res.json().catch(() => ({}));
+    setReminding(false);
+    setRemindMsg(res.ok ? `Reminder emailed to ${data.sent}/${data.pending} unclaimed recipients.` : (data.error ?? 'Failed'));
+  }
 
   const visible = rows.filter((r) => filter === 'all' || r.status === filter);
 
@@ -49,6 +66,15 @@ export function CredentialsTable({ credentials }: { credentials: Row[] }) {
   return (
     <>
       <PageTitle title="Issued credentials" subtitle="Everything this conference has issued — share links, track claims, revoke." />
+      {unclaimed > 0 ? (
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-md border border-border bg-surface/70 px-4 py-3">
+          <span className="text-sm text-muted">{unclaimed} credential{unclaimed === 1 ? '' : 's'} awaiting claim.</span>
+          <button className={buttonClass.outline} onClick={remindUnclaimed} disabled={reminding}>
+            {reminding ? 'Sending…' : 'Remind unclaimed'}
+          </button>
+          {remindMsg ? <span className="text-sm text-success">{remindMsg}</span> : null}
+        </div>
+      ) : null}
       <div className="mb-4 flex gap-2">
         {FILTERS.map((f) => (
           <button
