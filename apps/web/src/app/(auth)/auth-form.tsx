@@ -24,25 +24,18 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
     try {
       const supabase = supabaseBrowser();
       if (mode === 'signup') {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          // Redirect to THIS deployment's callback (not the project's default
-          // Site URL), so confirmation links open the live app, never localhost.
-          options: {
-            data: { full_name: fullName, role },
-            emailRedirectTo: `${window.location.origin}/auth/confirm`,
-          },
+        // Instant signup (no email step): the server creates the account
+        // already-confirmed, then we sign in normally to get a session.
+        const res = await fetch('/api/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password, full_name: fullName, role }),
         });
-        if (error) throw error;
-        if (!data.session) {
-          setNotice('Check your email to confirm your account, then come back and sign in.');
-          return;
-        }
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? 'Could not create your account');
       }
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
       // Claim anything issued to this email before the account existed.
       await fetch('/api/claim', { method: 'POST' });
       router.push('/dashboard');
