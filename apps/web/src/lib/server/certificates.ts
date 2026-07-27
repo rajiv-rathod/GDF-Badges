@@ -1,5 +1,6 @@
 import { PDFDocument, PageSizes, StandardFonts, rgb, type PDFFont, type PDFPage } from 'pdf-lib';
 import type { CertificateField, CertificateTemplate } from '@gdf/shared';
+import { supabaseUrl } from './config';
 
 /**
  * Certificate rendering with pdf-lib: background image + positioned text per
@@ -48,9 +49,9 @@ function drawField(page: PDFPage, font: PDFFont, field: CertificateField, value:
  * internal IPs, metadata endpoints, arbitrary hosts — is ignored.
  */
 export function isAllowedBackgroundUrl(url: string): boolean {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  if (!supabaseUrl) return false;
-  return url.startsWith(`${supabaseUrl.replace(/\/$/, '')}/storage/v1/object/public/assets/`);
+  const base = supabaseUrl();
+  if (!base) return false;
+  return url.startsWith(`${base.replace(/\/$/, '')}/storage/v1/object/public/assets/`);
 }
 
 export async function renderCertificatePdf(

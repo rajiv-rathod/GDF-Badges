@@ -5,12 +5,7 @@ import {
   signCredential,
 } from '@gdf/shared/server';
 import { randomUUID } from 'node:crypto';
-
-function signingKey(): string {
-  const key = process.env.CREDENTIAL_SIGNING_KEY;
-  if (!key) throw new Error('CREDENTIAL_SIGNING_KEY missing — run node scripts/generate-signing-keys.mjs');
-  return key;
-}
+import { getSigningPrivateKey } from './signing';
 
 /** Escape ILIKE wildcards so emails match literally (% and _ are wildcards otherwise). */
 export function escapeIlike(value: string): string {
@@ -61,7 +56,7 @@ export async function issueCredential(admin: SupabaseClient, input: IssueInput):
     issued_at,
     verification_code,
   };
-  const signature = signCredential(canonical, signingKey());
+  const signature = signCredential(canonical, await getSigningPrivateKey());
 
   // Auto-claim if this email already belongs to an account (wildcards escaped
   // so an address like a_b@x.org can never match a different account).

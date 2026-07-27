@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { buildOpenBadgeCredential, type CanonicalCredential, verifyCredentialSignature } from '@gdf/shared/server';
 import { clientKey, rateLimit } from '@/lib/server/ratelimit';
+import { getSigningPublicKey } from '@/lib/server/signing';
 import { supabaseAdmin } from '@/lib/supabase/server';
 
 /**
@@ -30,7 +31,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
     issued_at: data.issued_at,
     verification_code: data.verification_code,
   };
-  const publicKey = process.env.NEXT_PUBLIC_CREDENTIAL_PUBLIC_KEY ?? '';
+  const publicKey = await getSigningPublicKey();
   const keyConfigured = publicKey.length > 0;
   const signatureValid = keyConfigured && verifyCredentialSignature(canonical, data.signature, publicKey);
 
