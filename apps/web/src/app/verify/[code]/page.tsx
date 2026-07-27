@@ -9,7 +9,16 @@ export const dynamic = 'force-dynamic';
 
 export default async function VerifyPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
-  const { data } = await supabaseAdmin().rpc('get_credential_by_code', { p_code: code });
+  const admin = supabaseAdmin();
+  const { data } = await admin.rpc('get_credential_by_code', { p_code: code });
+
+  // Issuing org's branding (logo) for the public page, if they set one.
+  let orgLogo: string | null = null;
+  if (data?.org_id) {
+    const { data: org } = await admin.from('organizations').select('brand_overrides').eq('id', data.org_id).single();
+    const bo = org?.brand_overrides as { logo_url?: string } | null;
+    orgLogo = bo?.logo_url ?? null;
+  }
 
   if (!data) {
     return (
@@ -70,6 +79,10 @@ export default async function VerifyPage({ params }: { params: Promise<{ code: s
           </div>
 
           <Card className="mt-6">
+            {orgLogo ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={orgLogo} alt={data.org_name} className="mb-4 h-12 w-auto object-contain" />
+            ) : null}
             <p className="text-xs uppercase tracking-[0.25em] text-primary-dark">{data.type}</p>
             <h1 className="mt-2 font-display text-3xl font-bold">{data.template_name}</h1>
             <p className="mt-1 text-muted">{data.event_name}</p>
@@ -88,10 +101,15 @@ export default async function VerifyPage({ params }: { params: Promise<{ code: s
                 <dd className="mt-1">{new Date(data.issued_at).toLocaleDateString()}</dd>
               </div>
               <div>
-                <dt className="text-xs uppercase tracking-wide text-muted">Verification code</dt>
+                <dt className="text-xs uppercase tracking-wide text-muted">Certificate ID</dt>
                 <dd className="mt-1 break-all font-mono text-sm">{data.verification_code}</dd>
               </div>
             </dl>
+
+            <div className="mt-5 rounded-md border border-border bg-background/60 p-3">
+              <p className="text-xs uppercase tracking-wide text-muted">Public share link</p>
+              <p className="mt-1 break-all font-mono text-xs text-primary-dark">https://certview.gdf.social/verify/{data.verification_code}</p>
+            </div>
 
             {Object.keys(data.fields_json ?? {}).length > 0 ? (
               <div className="mt-6 border-t border-border pt-4">

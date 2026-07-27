@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
 import * as XLSX from 'xlsx';
+import { parseWorkbook, type ParsedWorkbook } from '@/lib/sheet';
 import { buttonClass, Card, EmptyState, ErrorBox, PageTitle } from '@/components/ui';
 
 interface DelegateRow {
@@ -15,8 +16,8 @@ interface DelegateRow {
 }
 
 /** Best-effort mapping of arbitrary sheet headers onto delegate fields. */
-function guessRows(sheetRows: Array<Record<string, unknown>>): DelegateRow[] {
-  const find = (row: Record<string, unknown>, patterns: RegExp[]) => {
+function guessRows(sheetRows: Array<Record<string, string>>): DelegateRow[] {
+  const find = (row: Record<string, string>, patterns: RegExp[]) => {
     for (const key of Object.keys(row)) {
       if (patterns.some((p) => p.test(key.toLowerCase().trim()))) return String(row[key] ?? '').trim();
     }
@@ -48,18 +49,33 @@ export function DelegatesManager({
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const workbookRef = useRef<ParsedWorkbook | null>(null);
+  const [sheetNames, setSheetNames] = useState<string[]>([]);
+  const [activeSheet, setActiveSheet] = useState('');
+
+  function loadSheet(name: string) {
+    try {
+      const { rows } = workbookRef.current!.getSheet(name);
+      const guessed = guessRows(rows);
+      if (guessed.length === 0) throw new Error(`No rows with an email column found in "${name}".`);
+      setActiveSheet(name);
+      setPending(guessed);
+      setNotice(`${guessed.length} delegates parsed from "${name}" — review below, then import.`);
+    } catch (err) {
+      setPending([]);
+      setError((err as Error).message);
+    }
+  }
 
   async function onFile(file: File) {
     setError('');
     try {
-      const workbook = XLSX.read(await file.arrayBuffer());
-      const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(workbook.Sheets[workbook.SheetNames[0]]);
-      const guessed = guessRows(rows);
-      if (guessed.length === 0) throw new Error('No rows with an email column found in that sheet.');
-      setPending(guessed);
-      setNotice(`${guessed.length} delegates parsed — review below, then import.`);
-    } catch (err) {
-      setError((err as Error).message);
+      const wb = await parseWorkbook(file);
+      workbookRef.current = wb;
+      setSheetNames(wb.sheetNames);
+      loadSheet(wb.sheetNames[0]);
+    } catch {
+      setError('Could not read that file. Supported: .xlsx, .xls, .csv, .tsv, .ods');
     }
   }
 
@@ -144,7 +160,7 @@ export function DelegatesManager({
         <input
           ref={fileInput}
           type="file"
-          accept=".xlsx,.xls,.csv"
+          accept=".xlsx,.xls,.xlsm,.csv,.tsv,.ods"
           className="hidden"
           onChange={(e) => {
             if (e.target.files?.[0]) onFile(e.target.files[0]);
@@ -152,8 +168,18 @@ export function DelegatesManager({
           }}
         />
         <button className={buttonClass.primary} onClick={() => fileInput.current?.click()}>
-          Import sheet (XLSX / CSV)
+          Import sheet (any format)
         </button>
+        {sheetNames.length > 1 ? (
+          <label className="flex items-center gap-2 text-sm text-muted">
+            Sheet
+            <select className="rounded-sm border border-border bg-background/70 px-3 py-2 text-foreground" value={activeSheet} onChange={(e) => loadSheet(e.target.value)}>
+              {sheetNames.map((n) => (
+                <option key={n} value={n}>{n}</option>
+              ))}
+            </select>
+          </label>
+        ) : null}
         {initialDelegates.length > 0 ? (
           <button className={buttonClass.outline} onClick={exportSheet}>
             Export XLSX

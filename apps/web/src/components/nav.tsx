@@ -1,10 +1,12 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { getSession } from '@/lib/server/auth';
+import { isAdminEmail } from '@/lib/server/admin';
 import { SignOutButton } from './sign-out';
 
 export async function AppNav() {
   const session = await getSession();
+  const admin = session ? await isAdminEmail(session.email) : false;
   return (
     <header className="border-b border-border bg-background/80 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
@@ -25,6 +27,11 @@ export async function AppNav() {
               <Link href={`/u/${session.profile.public_slug}`} className="text-muted transition hover:text-foreground">
                 Public profile
               </Link>
+              {admin ? (
+                <Link href="/admin" className="font-semibold text-primary-dark transition hover:text-primary">
+                  Admin
+                </Link>
+              ) : null}
               <SignOutButton />
             </>
           ) : (

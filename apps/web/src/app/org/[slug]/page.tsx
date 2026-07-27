@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Card } from '@/components/ui';
 import { HelpAssistant } from '@/components/help-assistant';
+import { BrandingForm } from './branding-form';
 import { requireOrgStaff } from '@/lib/server/auth';
 import { aiEnabled } from '@/lib/server/gemini';
 import { supabaseAdmin } from '@/lib/supabase/server';
@@ -12,6 +13,8 @@ export default async function OrgOverviewPage({ params }: { params: Promise<{ sl
   if (!ctx) redirect('/org');
 
   const admin = supabaseAdmin();
+  const { data: orgRow } = await admin.from('organizations').select('brand_overrides').eq('id', ctx.org.id).single();
+  const brand = (orgRow?.brand_overrides as { logo_url?: string; accent?: string; tagline?: string } | null) ?? {};
   const count = async (status?: string) => {
     let q = admin.from('credentials').select('id', { count: 'exact', head: true }).eq('org_id', ctx.org.id);
     if (status) q = q.eq('status', status);
@@ -55,6 +58,14 @@ export default async function OrgOverviewPage({ params }: { params: Promise<{ sl
             <p className="mt-1 text-sm text-muted">{c.body}</p>
           </Link>
         ))}
+      </div>
+      <div className="mt-8">
+        <BrandingForm
+          orgId={ctx.org.id}
+          initialLogo={brand.logo_url ?? null}
+          initialAccent={brand.accent ?? '#d73cbe'}
+          initialTagline={brand.tagline ?? ''}
+        />
       </div>
       {aiEnabled ? <HelpAssistant /> : null}
     </>

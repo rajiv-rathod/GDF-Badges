@@ -17,7 +17,11 @@ export async function getSession(): Promise<SessionInfo | null> {
   if (!user) return null;
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
   if (!profile) return null;
-  return { userId: user.id, email: user.email ?? profile.email, profile: profile as Profile };
+  const email = user.email ?? profile.email;
+  // Banned accounts are locked out of the whole app.
+  const { isBanned } = await import('./admin');
+  if (await isBanned(email)) return null;
+  return { userId: user.id, email, profile: profile as Profile };
 }
 
 export interface OrgContext {

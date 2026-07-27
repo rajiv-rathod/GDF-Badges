@@ -2,8 +2,8 @@
 
 import Link from 'next/link';
 import { useMemo, useRef, useState } from 'react';
-import * as XLSX from 'xlsx';
 import type { CertificateField } from '@gdf/shared';
+import { parseWorkbook, type ParsedWorkbook } from '@/lib/sheet';
 import { buttonClass, Card, ErrorBox, inputClass, PageTitle } from '@/components/ui';
 
 interface Template {
@@ -40,30 +40,22 @@ export function BulkIssue({ orgId, template, aiEnabled }: { orgId: string; templ
   const [results, setResults] = useState<IssuedRow[]>([]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState('');
+  const workbookRef = useRef<ParsedWorkbook | null>(null);
+  const [sheetNames, setSheetNames] = useState<string[]>([]);
+  const [sheet, setSheet] = useState('');
 
   const targets = useMemo(() => {
     const fieldKeys = template.layout_json.map((f) => f.key);
     return [EMAIL_KEY, ...(fieldKeys.includes(NAME_KEY) ? [] : [NAME_KEY]), ...fieldKeys];
   }, [template.layout_json]);
 
-  async function onFile(file: File) {
-    setError('');
-    setResults([]);
+  function loadSheet(name: string) {
     try {
-      const workbook = XLSX.read(await file.arrayBuffer());
-      // raw:false → dates/numbers arrive as their formatted display strings
-      // (no Excel serial numbers on certificates); defval keeps blank cells.
-      const parsed = XLSX.utils.sheet_to_json<Record<string, unknown>>(workbook.Sheets[workbook.SheetNames[0]], {
-        raw: false,
-        defval: '',
-      });
-      if (parsed.length === 0) throw new Error('That sheet has no data rows.');
-      // Union of keys across ALL rows — a column blank in row 1 still counts.
-      const cols = [...new Set(parsed.flatMap((r) => Object.keys(r)))];
+      const { columns: cols, rows: parsed } = workbookRef.current!.getSheet(name);
+      if (parsed.length === 0) throw new Error(`Sheet "${name}" has no data rows.`);
+      setSheet(name);
       setColumns(cols);
-      setRows(parsed.map((r) => Object.fromEntries(cols.map((c) => [c, String(r[c] ?? '').trim()]))));
-
-      // Auto-map: column header ≈ field key
+      setRows(parsed);
       const auto: Record<string, string> = {};
       for (const target of [EMAIL_KEY, NAME_KEY, ...template.layout_json.map((f) => f.key)]) {
         const wanted = target === EMAIL_KEY ? 'email' : target;
@@ -73,6 +65,19 @@ export function BulkIssue({ orgId, template, aiEnabled }: { orgId: string; templ
       setMapping(auto);
     } catch (err) {
       setError((err as Error).message);
+    }
+  }
+
+  async function onFile(file: File) {
+    setError('');
+    setResults([]);
+    try {
+      const wb = await parseWorkbook(file);
+      workbookRef.current = wb;
+      setSheetNames(wb.sheetNames);
+      loadSheet(wb.sheetNames[0]);
+    } catch {
+      setError('Could not read that file. Supported: .xlsx, .xls, .csv, .tsv, .ods');
     }
   }
 
@@ -181,7 +186,7 @@ export function BulkIssue({ orgId, template, aiEnabled }: { orgId: string; templ
       <input
         ref={fileInput}
         type="file"
-        accept=".xlsx,.xls,.csv"
+        accept=".xlsx,.xls,.xlsm,.csv,.tsv,.ods"
         className="hidden"
         onChange={(e) => {
           if (e.target.files?.[0]) onFile(e.target.files[0]);
@@ -192,6 +197,16 @@ export function BulkIssue({ orgId, template, aiEnabled }: { orgId: string; templ
         <button className={buttonClass.primary} onClick={() => fileInput.current?.click()} disabled={busy !== ''}>
           1 · Import sheet
         </button>
+        {sheetNames.length > 1 ? (
+          <label className="flex items-center gap-2 text-sm text-muted">
+            Sheet
+            <select className={`${inputClass} max-w-48`} value={sheet} onChange={(e) => loadSheet(e.target.value)} disabled={busy !== ''}>
+              {sheetNames.map((n) => (
+                <option key={n} value={n}>{n}</option>
+              ))}
+            </select>
+          </label>
+        ) : null}
         <input className={`${inputClass} max-w-xs`} placeholder="Event name (appears on credential)" value={eventName} onChange={(e) => setEventName(e.target.value)} />
         {rows.length > 0 && aiEnabled ? (
           <button className={buttonClass.outline} onClick={aiClean} disabled={busy !== ''}>
@@ -199,6 +214,7 @@ export function BulkIssue({ orgId, template, aiEnabled }: { orgId: string; templ
           </button>
         ) : null}
       </div>
+      <p className="mt-2 text-xs text-muted">Any spreadsheet works — .xlsx, .xls, .csv, .tsv or .ods. Multi-tab workbooks let you pick the sheet.</p>
 
       {error ? <div className="mt-4"><ErrorBox message={error} /></div> : null}
 

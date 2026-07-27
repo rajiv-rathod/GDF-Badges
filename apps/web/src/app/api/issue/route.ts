@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireOrgStaffById } from '@/lib/server/auth';
 import { issueCredential } from '@/lib/server/credentials';
 import { sendCredentialEmail } from '@/lib/server/email';
+import { appUrl } from '@/lib/server/appconfig';
 import { clientKey, rateLimit } from '@/lib/server/ratelimit';
 import { supabaseAdmin } from '@/lib/supabase/server';
 
@@ -42,7 +43,7 @@ export async function POST(request: Request) {
   if (!template || (template.org_id !== null && template.org_id !== ctx.org.id)) {
     return NextResponse.json({ error: 'Unknown badge template' }, { status: 400 });
   }
-  const origin = new URL(request.url).origin;
+  const origin = await appUrl();
 
   const results = [];
   const failures = [];
@@ -68,6 +69,7 @@ export async function POST(request: Request) {
         templateName: template.name ?? 'Badge',
         eventName: parsed.data.event_name,
         orgName: ctx.org.name,
+        certificateId: issued.verification_code,
         verifyUrl: `${origin}/verify/${issued.verification_code}`,
         claimUrl: `${origin}/signup`,
         alreadyClaimed: issued.status === 'claimed',
