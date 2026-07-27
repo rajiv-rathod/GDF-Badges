@@ -35,6 +35,8 @@ export function BulkIssue({ orgId, template, aiEnabled }: { orgId: string; templ
   const [columns, setColumns] = useState<string[]>([]);
   const [mapping, setMapping] = useState<Record<string, string>>({});
   const [eventName, setEventName] = useState('');
+  const [skills, setSkills] = useState('');
+  const [expires, setExpires] = useState('');
   const [previewUrl, setPreviewUrl] = useState('');
   const [progress, setProgress] = useState(-1);
   const [results, setResults] = useState<IssuedRow[]>([]);
@@ -164,6 +166,8 @@ export function BulkIssue({ orgId, template, aiEnabled }: { orgId: string; templ
             recipient_email: email,
             recipient_name: name,
             values: valuesForRow(row),
+            skills: skills.split(',').map((s) => s.trim()).filter(Boolean),
+            expires: expires || undefined,
           }),
         });
         const data = await res.json();
@@ -214,6 +218,15 @@ export function BulkIssue({ orgId, template, aiEnabled }: { orgId: string; templ
           </button>
         ) : null}
       </div>
+      {rows.length > 0 ? (
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <input className={`${inputClass} max-w-md`} placeholder="Skills (comma-separated, applied to all)" value={skills} onChange={(e) => setSkills(e.target.value)} />
+          <label className="flex items-center gap-2 text-sm text-muted">
+            Expires
+            <input className={`${inputClass} max-w-40`} type="date" value={expires} onChange={(e) => setExpires(e.target.value)} />
+          </label>
+        </div>
+      ) : null}
       <p className="mt-2 text-xs text-muted">Any spreadsheet works — .xlsx, .xls, .csv, .tsv or .ods. Multi-tab workbooks let you pick the sheet.</p>
 
       {error ? <div className="mt-4"><ErrorBox message={error} /></div> : null}

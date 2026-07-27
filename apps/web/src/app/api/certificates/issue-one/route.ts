@@ -16,6 +16,9 @@ const schema = z.object({
   recipient_email: z.string().email(),
   recipient_name: z.string().min(1).max(200),
   values: z.record(z.string()).default({}),
+  skills: z.array(z.string().max(60)).max(20).optional(),
+  evidence: z.string().max(2000).optional(),
+  expires: z.string().max(40).optional(),
 });
 
 /**
@@ -41,14 +44,22 @@ export async function POST(request: Request) {
     .maybeSingle();
   if (!template) return NextResponse.json({ error: 'Unknown certificate template' }, { status: 400 });
 
-  const values = { ...parsed.data.values, recipient_name: parsed.data.recipient_name };
+  // Render uses only the visual field values; skills/evidence/expiry are
+  // credential metadata folded into the signed fields (not drawn on the PDF).
+  const renderValues = { ...parsed.data.values, recipient_name: parsed.data.recipient_name };
+  const skills = (parsed.data.skills ?? []).map((s) => s.trim()).filter(Boolean);
+  const values: Record<string, string> = { ...renderValues };
+  if (skills.length) values.skills = skills.join(', ');
+  if (parsed.data.evidence?.trim()) values.evidence = parsed.data.evidence.trim();
+  if (parsed.data.expires?.trim()) values.expires = parsed.data.expires.trim();
+
   const pdf = await renderCertificatePdf(
     {
       background_url: template.background_url,
       layout_json: template.layout_json as CertificateField[],
       page_size: template.page_size as CertificateTemplate['page_size'],
     },
-    values,
+    renderValues,
   );
 
   const issued = await issueCredential(admin, {

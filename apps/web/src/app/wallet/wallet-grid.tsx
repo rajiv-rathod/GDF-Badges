@@ -4,6 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
 import { StatusPill } from '@/components/ui';
+import { ShareBar } from '@/components/share-bar';
 
 export interface WalletCredential {
   id: string;
@@ -18,11 +19,12 @@ export interface WalletCredential {
   org_name: string;
   template_name: string;
   template_image: string | null;
+  skills: string[];
+  expires: string | null;
 }
 
 export function WalletGrid({ credentials }: { credentials: WalletCredential[] }) {
   const [items, setItems] = useState(credentials);
-  const [copied, setCopied] = useState('');
 
   async function toggleVisibility(credential: WalletCredential) {
     const next = !credential.is_public;
@@ -35,12 +37,6 @@ export function WalletGrid({ credentials }: { credentials: WalletCredential[] })
     if (!res.ok) {
       setItems((prev) => prev.map((c) => (c.id === credential.id ? { ...c, is_public: !next } : c)));
     }
-  }
-
-  async function copyLink(credential: WalletCredential) {
-    await navigator.clipboard.writeText(`${window.location.origin}/verify/${credential.verification_code}`);
-    setCopied(credential.id);
-    setTimeout(() => setCopied(''), 1500);
   }
 
   return (
@@ -61,7 +57,17 @@ export function WalletGrid({ credentials }: { credentials: WalletCredential[] })
           <p className="text-sm text-muted">
             {c.event_name} · {c.org_name}
           </p>
-          <p className="mt-1 text-xs text-muted">Issued {c.issued_at.slice(0, 10)}</p>
+          <p className="mt-1 text-xs text-muted">
+            Issued {c.issued_at.slice(0, 10)}
+            {c.expires ? <span className={expiredNow(c.expires) ? 'text-danger' : ''}> · expires {c.expires.slice(0, 10)}</span> : null}
+          </p>
+          {c.skills.length > 0 ? (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {c.skills.slice(0, 6).map((s) => (
+                <span key={s} className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary-dark">{s}</span>
+              ))}
+            </div>
+          ) : null}
           <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-border pt-3 text-sm">
             <Link className="font-semibold text-primary-dark hover:underline" href={`/verify/${c.verification_code}`}>
               Verify
@@ -71,16 +77,21 @@ export function WalletGrid({ credentials }: { credentials: WalletCredential[] })
                 Download
               </a>
             ) : null}
-            <button className="font-semibold text-muted hover:text-foreground" onClick={() => copyLink(c)}>
-              {copied === c.id ? 'Copied!' : 'Copy link'}
-            </button>
             <label className="ml-auto flex cursor-pointer items-center gap-1.5 text-xs text-muted">
               <input type="checkbox" checked={c.is_public} onChange={() => toggleVisibility(c)} className="accent-[#d73cbe]" />
               Public
             </label>
           </div>
+          <div className="mt-3">
+            <ShareBar code={c.verification_code} templateName={c.template_name} orgName={c.org_name} issuedAt={c.issued_at} compact />
+          </div>
         </div>
       ))}
     </div>
   );
+}
+
+function expiredNow(iso: string): boolean {
+  const t = Date.parse(iso);
+  return !Number.isNaN(t) && t < Date.now();
 }

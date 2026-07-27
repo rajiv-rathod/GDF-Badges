@@ -15,5 +15,5 @@ export default async function OrgCredentialsPage({ params }: { params: Promise<{
     .order('issued_at', { ascending: false })
     .limit(500);
 
-  return <CredentialsTable credentials={data ?? []} />;
+  return <CredentialsTable credentials={data ?? []} orgId={ctx.org.id} />;
 }

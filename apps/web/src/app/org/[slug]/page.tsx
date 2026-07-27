@@ -29,12 +29,32 @@ export default async function OrgOverviewPage({ params }: { params: Promise<{ sl
     admin.from('delegates').select('id', { count: 'exact', head: true }).eq('org_id', ctx.org.id),
   ]);
 
+  // Engagement funnel: count 'viewed'/'shared' audit events for this org's credentials.
+  const { data: orgCredIds } = await admin.from('credentials').select('id').eq('org_id', ctx.org.id);
+  const ids = (orgCredIds ?? []).map((c) => c.id);
+  let views = 0;
+  let shares = 0;
+  if (ids.length) {
+    const [{ count: v }, { count: s }] = await Promise.all([
+      admin.from('credential_events').select('id', { count: 'exact', head: true }).eq('event', 'viewed').in('credential_id', ids),
+      admin.from('credential_events').select('id', { count: 'exact', head: true }).eq('event', 'shared').in('credential_id', ids),
+    ]);
+    views = v ?? 0;
+    shares = s ?? 0;
+  }
+
   const stats = [
     { label: 'Credentials issued', value: total },
     { label: 'Awaiting claim', value: issued },
     { label: 'Claimed', value: claimed },
     { label: 'Revoked', value: revoked },
     { label: 'Delegates on roster', value: delegates ?? 0 },
+  ];
+  const funnel = [
+    { label: 'Issued', value: total },
+    { label: 'Claimed', value: claimed, rate: total ? Math.round((claimed / total) * 100) : 0 },
+    { label: 'Shared', value: shares },
+    { label: 'Verify views', value: views },
   ];
 
   return (
@@ -47,6 +67,22 @@ export default async function OrgOverviewPage({ params }: { params: Promise<{ sl
           </Card>
         ))}
       </div>
+
+      <div className="mt-6 rounded-lg border border-border bg-surface/70 p-5">
+        <p className="text-xs uppercase tracking-wide text-muted">Engagement funnel</p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-4">
+          {funnel.map((f) => (
+            <div key={f.label} className="rounded-md border border-border bg-background/60 p-3">
+              <p className="font-display text-2xl font-bold">{f.value}</p>
+              <p className="text-xs text-muted">
+                {f.label}
+                {typeof f.rate === 'number' ? <span className="ml-1 font-semibold text-primary-dark">{f.rate}%</span> : null}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div className="mt-8 grid gap-4 sm:grid-cols-3">
         {[
           { href: `/org/${slug}/delegates`, title: 'Import your roster', body: 'Upload the delegate sheet (XLSX/CSV) once — issue everything from it.' },

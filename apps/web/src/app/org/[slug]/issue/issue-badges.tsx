@@ -40,6 +40,9 @@ export function IssueBadges({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState('');
+  const [skills, setSkills] = useState('');
+  const [evidence, setEvidence] = useState('');
+  const [expires, setExpires] = useState('');
 
   function toggle(id: string) {
     setSelected((prev) => {
@@ -95,7 +98,15 @@ export function IssueBadges({
       const res = await fetch('/api/issue', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ org_id: orgId, template_id: templateId, event_name: eventName, recipients }),
+        body: JSON.stringify({
+          org_id: orgId,
+          template_id: templateId,
+          event_name: eventName,
+          skills: skills.split(',').map((s) => s.trim()).filter(Boolean),
+          evidence: evidence.trim() || undefined,
+          expires: expires || undefined,
+          recipients,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Issuance failed');
@@ -138,6 +149,17 @@ export function IssueBadges({
 
           <h2 className="mb-3 mt-8 font-display font-semibold">2 · Event name</h2>
           <input className={inputClass} placeholder="e.g. GDF International MUN 2026" value={eventName} onChange={(e) => setEventName(e.target.value)} />
+
+          <h2 className="mb-3 mt-8 font-display font-semibold">Optional · Skills, evidence & expiry</h2>
+          <div className="grid gap-3">
+            <input className={inputClass} placeholder="Skills (comma-separated) — e.g. Diplomacy, Negotiation, Public Speaking" value={skills} onChange={(e) => setSkills(e.target.value)} />
+            <input className={inputClass} placeholder="Evidence — a link or note (optional)" value={evidence} onChange={(e) => setEvidence(e.target.value)} />
+            <label className="flex items-center gap-2 text-sm text-muted">
+              Expires on
+              <input className={`${inputClass} max-w-44`} type="date" value={expires} onChange={(e) => setExpires(e.target.value)} />
+              <span className="text-xs">(leave blank = never)</span>
+            </label>
+          </div>
 
           {aiEnabled ? (
             <>
