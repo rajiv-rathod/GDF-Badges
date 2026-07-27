@@ -2,19 +2,53 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Licensed GDF typefaces — drop the font files into /public/fonts to activate
+   (see public/fonts/README.md). Until then the open fallbacks below apply. */
+@font-face {
+  font-family: 'Lastica';
+  src: url('/fonts/Lastica.woff2') format('woff2'), url('/fonts/Lastica.woff') format('woff');
+  font-weight: 400 800;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'TT Interphases';
+  src: url('/fonts/TTInterphases-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'TT Interphases';
+  src: url('/fonts/TTInterphases-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-display: swap;
+}
+
 body {
   @apply bg-background text-foreground font-body antialiased;
 }
 
-/* GDF signature background: subtle globe-grid mesh over deep navy.
-   Stroke color mirrors effects.globeGridStroke in @gdf/shared tokens. */
+/* GDF brand backdrop: soft blurred pink/violet/blue gradient clouds over
+   near-white, recreated from the official background asset. Fixed so every
+   page sits on it. */
+.gdf-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(42% 38% at 18% 12%, rgba(233, 175, 220, 0.55) 0%, rgba(233, 175, 220, 0) 100%),
+    radial-gradient(36% 34% at 84% 10%, rgba(205, 155, 235, 0.5) 0%, rgba(205, 155, 235, 0) 100%),
+    radial-gradient(30% 30% at 4% 34%, rgba(173, 196, 235, 0.4) 0%, rgba(173, 196, 235, 0) 100%),
+    radial-gradient(26% 30% at 52% 30%, rgba(240, 180, 205, 0.35) 0%, rgba(240, 180, 205, 0) 100%),
+    #fdfafd;
+}
+
+/* Subtle magenta dot-grid mesh (echoes the halftone logo) for hero sections */
 .gdf-globe-grid {
-  background-image:
-    linear-gradient(rgba(215, 60, 190, 0.14) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(215, 60, 190, 0.14) 1px, transparent 1px);
-  background-size: 56px 56px;
-  mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, black 30%, transparent 75%);
-  -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, black 30%, transparent 75%);
+  background-image: radial-gradient(rgba(215, 60, 190, 0.14) 1.5px, transparent 1.5px);
+  background-size: 26px 26px;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, black 25%, transparent 72%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, black 25%, transparent 72%);
 }
 
 .gdf-cta-gradient {
@@ -22,5 +56,5 @@ body {
 }
 
 .gdf-hero-glow {
-  background: radial-gradient(ellipse at center, rgba(215, 60, 190, 0.25) 0%, rgba(6, 0, 46, 0) 70%);
+  background: radial-gradient(ellipse at center, rgba(255, 69, 225, 0.14) 0%, rgba(253, 250, 253, 0) 70%);
 }

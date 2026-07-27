@@ -18,8 +18,8 @@ const config: Config = {
         danger: colors.danger,
       },
       fontFamily: {
-        display: [`"${fonts.display}"`, 'sans-serif'],
-        body: [`"${fonts.body}"`, 'sans-serif'],
+        display: [`"${fonts.display}"`, 'var(--font-display)', 'sans-serif'],
+        body: [`"${fonts.body}"`, 'var(--font-body)', 'sans-serif'],
       },
       borderRadius: {
         sm: `${radii.sm}px`,

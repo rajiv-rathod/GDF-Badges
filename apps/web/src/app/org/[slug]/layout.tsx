@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { brand } from '@gdf/shared';
 import { AppNav } from '@/components/nav';
 import { requireOrgStaff } from '@/lib/server/auth';
 
@@ -9,7 +10,6 @@ const TABS = [
   { href: '/issue', label: 'Issue badges' },
   { href: '/certificates', label: 'Certificates' },
   { href: '/credentials', label: 'Issued' },
-  { href: '/meetings', label: 'Meetings' },
 ];
 
 export default async function OrgLayout({
@@ -29,7 +29,7 @@ export default async function OrgLayout({
       <div className="border-b border-border bg-surface/30">
         <div className="mx-auto max-w-6xl px-6 pt-6">
           <h1 className="font-display text-2xl font-bold">{ctx.org.name}</h1>
-          <nav className="mt-4 flex gap-1 overflow-x-auto text-sm">
+          <nav className="mt-4 flex items-center gap-1 overflow-x-auto text-sm">
             {TABS.map((tab) => (
               <Link
                 key={tab.href}
@@ -39,6 +39,14 @@ export default async function OrgLayout({
                 {tab.label}
               </Link>
             ))}
+            <a
+              href={brand.meetingAppUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="ml-auto whitespace-nowrap rounded-sm border border-primary px-4 py-1.5 font-semibold text-primary-dark transition hover:bg-primary/10"
+            >
+              Launch meeting app ↗
+            </a>
           </nav>
         </div>
       </div>

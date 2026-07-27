@@ -33,7 +33,6 @@ Environment variables (from `apps/web/.env.example`):
 | `NEXT_PUBLIC_CREDENTIAL_PUBLIC_KEY` | ✅ | step 2 |
 | `RESEND_API_KEY` | optional | resend.com — enables issue emails |
 | `EMAIL_FROM` | optional | verified sender |
-| `JITSI_DOMAIN` / `JITSI_APP_ID` / `JITSI_JWT_SECRET` | optional | your Jitsi |
 | `GEMINI_API_KEY` | optional | AI features |
 
 Deploy → smoke test: sign up as Organizer → create conference → issue a badge
@@ -84,11 +83,10 @@ Google review typically takes 1–3 days for a first submission. To put the app
 in delegates' hands *today*, distribute the **preview APK** directly (EAS gives
 a QR/download link) while the Play review runs.
 
-## 5. Jitsi meetings (optional, ~10 min) **[you]**
+## 5. Meetings
 
-On your Jitsi VM, enable JWT auth in prosody (`authentication = "token"`,
-set `app_id`/`app_secret`), restart prosody + jicofo, then set the three
-`JITSI_*` vars in Vercel and redeploy.
+Video meetings run in the external GDF meeting app — the web app links to
+https://meet.apextech.llc everywhere. Nothing to configure here.
 
 ## 6. Day-one checklist
 

@@ -38,7 +38,8 @@ export default function TermsPage() {
             <p className="mt-2">
               The service is provided &quot;as is&quot;. To the maximum extent permitted by law, GDF is not liable for damages
               arising from use of the service, including lost data or reliance on any credential. We may modify or
-              discontinue the service; we will make reasonable efforts to give notice.
+              discontinue the service; we will make reasonable efforts to give notice. Questions:{' '}
+              <a href="mailto:rajiv@gdf.social" className="text-primary-dark hover:underline">rajiv@gdf.social</a>.
             </p>
           </section>
         </Card>

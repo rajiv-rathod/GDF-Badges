@@ -95,9 +95,9 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
       </form>
       <p className="mt-4 text-sm text-muted">
         {mode === 'signup' ? (
-          <>Already have an account? <Link className="text-accent" href="/login">Sign in</Link></>
+          <>Already have an account? <Link className="text-primary-dark" href="/login">Sign in</Link></>
         ) : (
-          <>New here? <Link className="text-accent" href="/signup">Create an account</Link></>
+          <>New here? <Link className="text-primary-dark" href="/signup">Create an account</Link></>
         )}
       </p>
     </Card>

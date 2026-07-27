@@ -4,4 +4,3 @@ Disallow: /api/
 Disallow: /org/
 Disallow: /wallet
 Disallow: /dashboard
-Disallow: /meet/

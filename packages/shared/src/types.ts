@@ -8,7 +8,6 @@ export type OrgRole = 'owner' | 'admin' | 'staff';
 export type CredentialType = 'badge' | 'certificate';
 export type CredentialStatus = 'issued' | 'claimed' | 'revoked';
 export type CredentialEventType = 'created' | 'claimed' | 'revoked' | 'viewed';
-export type MeetingStatus = 'scheduled' | 'live' | 'ended';
 
 export interface Organization {
   id: string;
@@ -99,16 +98,6 @@ export interface Delegate {
   committee: string;
   country_portfolio: string;
   award: string | null;
-}
-
-export interface Meeting {
-  id: string;
-  org_id: string;
-  room_name: string;
-  host_id: string;
-  scheduled_at: string;
-  jwt_config: Record<string, unknown> | null;
-  status: MeetingStatus;
 }
 
 export interface CredentialEvent {

@@ -22,32 +22,36 @@ MUN community, not a paid product.
 - Monorepo: apps/web (Next.js, Vercel), apps/mobile (React Native + Expo, Android-first),
   packages/shared (types, credential logic, brand tokens).
 - Backend: Supabase (Postgres, Auth, Storage, RLS, Edge Functions).
-- Cert rendering: Playwright HTML→PDF.
-- Video: self-hosted Jitsi via JWT + iframe (web) / @jitsi/react-native-sdk (mobile).
+- Cert rendering: pdf-lib (chosen over headless-browser rendering for low-memory hosts).
+- Video: external GDF meeting app at https://meet.apextech.llc — the web app links
+  out to it ("Launch meeting app"); no in-app video.
 - AI: Gemini API (modular, feature-flagged).
 - Sheets: SheetJS (xlsx) for delegate import/export.
 
 ## BRAND TOKENS
-Sourced from the live gdf.social site (Global Diplomacy Forum). Canonical
-definitions live in `packages/shared/src/tokens.ts` — that file is the single
-source of truth; the values below are the reference copy.
+Sourced from the official GDF brand assets supplied by the team (dotted-halftone
+circle logo, light gradient background, brand PDF). Canonical definitions live
+in `packages/shared/src/tokens.ts` — that file is the single source of truth;
+the values below are the reference copy.
 
 - primary:        #d73cbe   /* GDF magenta */
-- primary-dark:   #a52b93   /* darker shade of primary for hover/pressed */
-- accent:         #ff45e1   /* bright pink highlight */
-- background:     #06002e   /* deep midnight navy — GDF's base surface */
-- surface:        #2d2659   /* raised card surface (dark violet) */
-- text:           #fbfbf9   /* off-white */
-- muted:          #a9a3c9   /* lavender-grey secondary text (derived for AA contrast on background) */
-- font-display:   "Space Grotesk"  /* gdf.social uses Canva Sans (proprietary); this is the open substitute */
-- font-body:      "Inter"          /* open substitute for Canva Sans body weights */
-- logo:           packages/shared/assets/gdf-logo.svg (web copy: apps/web/public/gdf-logo.svg)
-- effects:        subtle globe-grid (latitude/longitude line mesh) over the deep
-                  navy background, magenta→pink gradient reserved for CTAs and
-                  credential seals only — never full-page gradients.
-> Colors were extracted from the live gdf.social pages. The site's typeface is
-> Canva Sans, which cannot be redistributed — Space Grotesk / Inter are the
-> chosen open equivalents. Do NOT invent a new palette.
+- primary-dark:   #a52b93   /* hover/pressed + AA link color on light */
+- accent:         #ff45e1   /* bright pink highlight (gradients/seals only) */
+- background:     #fdfafd   /* near-white base — GDF's brand background is LIGHT */
+- surface:        #ffffff   /* raised card surface */
+- text:           #1b1440   /* deep navy-violet primary text */
+- muted:          #6f6690   /* violet-grey secondary text */
+- font-display:   "Lastica"         /* licensed — drop files in apps/web/public/fonts */
+- font-body:      "TT Interphases"  /* licensed — same; Space Grotesk/Inter are the open fallbacks */
+- logo:           dotted-halftone circle GDF mark — packages/shared/assets/gdf-logo.svg
+                  (web copy: apps/web/public/gdf-logo.svg)
+- effects:        soft blurred pink/violet/blue gradient clouds over near-white
+                  (`.gdf-backdrop`), subtle magenta dot-grid echoing the halftone
+                  logo, magenta→pink gradient reserved for CTAs and credential
+                  seals only — never full-page gradients.
+- support email:  rajiv@gdf.social
+> The typefaces are commercially licensed and NOT committed to the repo — see
+> apps/web/public/fonts/README.md. Do NOT invent a new palette.
 
 ## Conventions
 - TypeScript everywhere. Zod for validation. Server logic in Supabase Edge Functions

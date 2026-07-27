@@ -1,8 +1,6 @@
 -- MUN CertView — full schema, RLS, and credential functions.
 -- Apply with: supabase db push   (or paste into the Supabase SQL editor)
 
-create extension if not exists pgcrypto;
-
 -- ---------------------------------------------------------------------------
 -- Tables
 -- ---------------------------------------------------------------------------
@@ -89,17 +87,6 @@ create table public.delegates (
 );
 create unique index delegates_org_email_idx on public.delegates (org_id, lower(email));
 
-create table public.meetings (
-  id uuid primary key default gen_random_uuid(),
-  org_id uuid not null references public.organizations (id) on delete cascade,
-  room_name text not null,
-  host_id uuid not null references public.profiles (id),
-  scheduled_at timestamptz not null default now(),
-  jwt_config jsonb,
-  status text not null default 'scheduled' check (status in ('scheduled', 'live', 'ended')),
-  created_at timestamptz not null default now()
-);
-
 create table public.credential_events (
   id uuid primary key default gen_random_uuid(),
   credential_id uuid not null references public.credentials (id) on delete cascade,
@@ -163,8 +150,10 @@ create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public as $$
 declare v_slug text;
 begin
+  -- built-ins only: extension functions (pgcrypto) live in Supabase's
+  -- "extensions" schema, which this function's search_path does not include
   v_slug := regexp_replace(lower(split_part(new.email, '@', 1)), '[^a-z0-9]+', '-', 'g')
-            || '-' || substr(encode(gen_random_bytes(3), 'hex'), 1, 6);
+            || '-' || substr(md5(random()::text || clock_timestamp()::text), 1, 6);
   insert into public.profiles (id, full_name, email, role, public_slug)
   values (
     new.id,
@@ -288,7 +277,6 @@ alter table public.badge_templates enable row level security;
 alter table public.certificate_templates enable row level security;
 alter table public.credentials enable row level security;
 alter table public.delegates enable row level security;
-alter table public.meetings enable row level security;
 alter table public.credential_events enable row level security;
 
 -- profiles: you see and edit yourself (public lookups go through the definer fn).
@@ -332,17 +320,6 @@ create policy "credentials recipient or staff select" on public.credentials for 
 -- delegates: org staff only
 create policy "delegates all" on public.delegates for all
   using (public.is_org_staff(org_id)) with check (public.is_org_staff(org_id));
-
--- meetings: staff manage; members with a credential from the org may view/join
-create policy "meetings staff all" on public.meetings for all
-  using (public.is_org_staff(org_id)) with check (public.is_org_staff(org_id));
-create policy "meetings member select" on public.meetings for select using (
-  exists (select 1 from public.credentials c
-          where c.org_id = meetings.org_id
-            and c.status <> 'revoked'
-            and (c.recipient_user_id = auth.uid()
-                 or lower(c.recipient_email) = lower(coalesce(auth.jwt() ->> 'email', ''))))
-);
 
 -- credential events: org staff read the audit log; writes via definer fns/service role
 create policy "credential events staff select" on public.credential_events for select using (

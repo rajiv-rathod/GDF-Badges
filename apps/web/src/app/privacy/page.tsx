@@ -22,9 +22,9 @@ export default function PrivacyPage() {
           <section>
             <h2 className="font-display text-base font-semibold text-foreground">How it is used</h2>
             <p className="mt-2">
-              Solely to operate the service: issuing, claiming, verifying, and displaying credentials; running
-              conference meetings; and notifying you by email when a credential is issued to your address. MUN CertView
-              is free; we do not sell or rent personal data, and we do not use it for advertising.
+              Solely to operate the service: issuing, claiming, verifying, and displaying credentials, and notifying
+              you by email when a credential is issued to your address. MUN CertView is free; we do not sell or rent
+              personal data, and we do not use it for advertising.
             </p>
           </section>
           <section>
@@ -39,17 +39,18 @@ export default function PrivacyPage() {
             <h2 className="font-display text-base font-semibold text-foreground">Storage and processors</h2>
             <p className="mt-2">
               Data is stored in Supabase (Postgres, auth, file storage). Optional processors, when enabled by the
-              deployment: Resend (email delivery), Google Gemini (organizer-requested text drafting — delegate names
-              in a sheet may be sent for cleanup when an organizer clicks the AI clean-up button), and a self-hosted
-              Jitsi server for video meetings.
+              deployment: Resend (email delivery) and Google Gemini (organizer-requested text drafting — delegate
+              names in a sheet may be sent for cleanup when an organizer clicks the AI clean-up button). Conference
+              video meetings run in the separate GDF meeting app (meet.apextech.llc), which has its own policies.
             </p>
           </section>
           <section>
             <h2 className="font-display text-base font-semibold text-foreground">Your rights</h2>
             <p className="mt-2">
               You may request access to, correction of, or deletion of your personal data at any time. Revoked or
-              deleted credentials stop verifying immediately. Contact the Global Diplomacy Forum via gdf.social to
-              exercise these rights or ask questions about this policy.
+              deleted credentials stop verifying immediately. Contact us at{' '}
+              <a href="mailto:rajiv@gdf.social" className="text-primary-dark hover:underline">rajiv@gdf.social</a>{' '}
+              to exercise these rights or ask questions about this policy.
             </p>
           </section>
         </Card>
