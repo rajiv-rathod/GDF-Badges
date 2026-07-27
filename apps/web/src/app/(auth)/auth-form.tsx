@@ -27,11 +27,16 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
-          options: { data: { full_name: fullName, role } },
+          // Redirect to THIS deployment's callback (not the project's default
+          // Site URL), so confirmation links open the live app, never localhost.
+          options: {
+            data: { full_name: fullName, role },
+            emailRedirectTo: `${window.location.origin}/auth/confirm`,
+          },
         });
         if (error) throw error;
         if (!data.session) {
-          setNotice('Check your email to confirm your account, then sign in.');
+          setNotice('Check your email to confirm your account, then come back and sign in.');
           return;
         }
       } else {
