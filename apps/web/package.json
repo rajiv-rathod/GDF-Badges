@@ -13,7 +13,9 @@
     "@gdf/shared": "*",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.49.0",
+    "lenis": "^1.1.18",
     "next": "^15.1.6",
+    "nodemailer": "^6.9.16",
     "pdf-lib": "^1.17.1",
     "react": "19.1.0",
     "react-dom": "19.1.0",
@@ -22,6 +24,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
+    "@types/nodemailer": "^6.4.17",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "autoprefixer": "^10.4.20",

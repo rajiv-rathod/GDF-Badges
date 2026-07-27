@@ -4,6 +4,7 @@ import { requireOrgStaffById } from '@/lib/server/auth';
 import { renderCertificatePdf } from '@/lib/server/certificates';
 import { issueCredential } from '@/lib/server/credentials';
 import { sendCredentialEmail } from '@/lib/server/email';
+import { appUrl } from '@/lib/server/appconfig';
 import { clientKey, rateLimit } from '@/lib/server/ratelimit';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import type { CertificateField, CertificateTemplate } from '@gdf/shared';
@@ -62,15 +63,17 @@ export async function POST(request: Request) {
   });
 
   const path = `${ctx.org.slug}/${issued.verification_code}.pdf`;
+  let assetUrl: string | null = null;
   const { error: uploadError } = await admin.storage
     .from('certs')
     .upload(path, Buffer.from(pdf), { contentType: 'application/pdf', upsert: true });
   if (!uploadError) {
     const { data } = admin.storage.from('certs').getPublicUrl(path);
-    await admin.from('credentials').update({ asset_url: data.publicUrl }).eq('id', issued.id);
+    assetUrl = data.publicUrl;
+    await admin.from('credentials').update({ asset_url: assetUrl }).eq('id', issued.id);
   }
 
-  const origin = new URL(request.url).origin;
+  const origin = await appUrl();
   const { data: templateName } = await admin
     .from('certificate_templates')
     .select('name')
@@ -83,8 +86,10 @@ export async function POST(request: Request) {
     templateName: templateName?.name ?? 'Certificate',
     eventName: parsed.data.event_name,
     orgName: ctx.org.name,
+    certificateId: issued.verification_code,
     verifyUrl: `${origin}/verify/${issued.verification_code}`,
     claimUrl: `${origin}/signup`,
+    assetUrl,
     alreadyClaimed: issued.status === 'claimed',
   });
 

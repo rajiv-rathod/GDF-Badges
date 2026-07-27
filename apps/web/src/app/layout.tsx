@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Space_Grotesk, Inter } from 'next/font/google';
 import { brand } from '@gdf/shared';
 import { publicConfig } from '@/lib/server/config';
+import { SmoothScroll } from '@/components/smooth-scroll';
 import './globals.css';
 
 const spaceGrotesk = Space_Grotesk({ subsets: ['latin'], variable: '--font-display' });
@@ -26,6 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             __html: `window.__GDF__=${JSON.stringify({ url: cfg.url, anonKey: cfg.anonKey })}`,
           }}
         />
+        <SmoothScroll />
         <div className="gdf-backdrop" aria-hidden />
         {children}
       </body>
