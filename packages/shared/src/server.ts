@@ -46,6 +46,13 @@ export function generateSigningKeyPair(): { privateKey: string; publicKey: strin
   };
 }
 
+/** Derive the SPKI-DER-base64 public key from a PKCS#8-DER-base64 private key. */
+export function publicKeyFromPrivate(privateKeyB64: string): string {
+  const priv = createPrivateKey({ key: Buffer.from(privateKeyB64, 'base64'), format: 'der', type: 'pkcs8' });
+  const pub = createPublicKey(priv);
+  return pub.export({ format: 'der', type: 'spki' }).toString('base64');
+}
+
 export function signCredential(credential: CanonicalCredential, privateKeyB64: string): string {
   const key = createPrivateKey({ key: Buffer.from(privateKeyB64, 'base64'), format: 'der', type: 'pkcs8' });
   return sign(null, Buffer.from(canonicalize(credential)), key).toString('base64url');

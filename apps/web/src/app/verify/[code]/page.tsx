@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { AppNav } from '@/components/nav';
 import { Card, EmptyState } from '@/components/ui';
 import { type CanonicalCredential, verifyCredentialSignature } from '@gdf/shared/server';
+import { getSigningPublicKey } from '@/lib/server/signing';
 import { supabaseAdmin } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
@@ -36,7 +37,7 @@ export default async function VerifyPage({ params }: { params: Promise<{ code: s
     issued_at: data.issued_at,
     verification_code: data.verification_code,
   };
-  const publicKey = process.env.NEXT_PUBLIC_CREDENTIAL_PUBLIC_KEY ?? '';
+  const publicKey = await getSigningPublicKey();
   const keyConfigured = publicKey.length > 0;
   const signatureValid = keyConfigured && verifyCredentialSignature(canonical, data.signature, publicKey);
   const revoked = data.status === 'revoked';
