@@ -14,7 +14,7 @@ export default async function AdminPage() {
   const db = supabaseAdmin();
   const [{ data: profiles }, { data: orgs }, { count: credCount }, { count: delegateCount }] = await Promise.all([
     db.from('profiles').select('id, full_name, email, role, created_at').order('created_at', { ascending: false }).limit(500),
-    db.from('organizations').select('id, name, slug, owner_id, created_at').order('created_at', { ascending: false }),
+    db.from('organizations').select('id, name, slug, owner_id, created_at, mymun_url').order('created_at', { ascending: false }),
     db.from('credentials').select('id', { count: 'exact', head: true }),
     db.from('delegates').select('id', { count: 'exact', head: true }),
   ]);
@@ -37,6 +37,7 @@ export default async function AdminPage() {
     slug: o.slug,
     owner: ownerName.get(o.owner_id) ?? '—',
     created_at: o.created_at,
+    mymun_url: o.mymun_url ?? null,
   }));
 
   const stats = {

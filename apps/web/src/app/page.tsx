@@ -109,6 +109,7 @@ export default async function Home() {
           </span>
           <span className="flex gap-4">
             <a href="/privacy" className="hover:text-foreground">Privacy</a>
+            <a href="/data-collection" className="hover:text-foreground">Data collection</a>
             <a href="/terms" className="hover:text-foreground">Terms</a>
           </span>
         </footer>

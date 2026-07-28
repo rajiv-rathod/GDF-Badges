@@ -1,20 +1,23 @@
-import { getAppConfig, setAppConfig, adminEmails } from './appconfig';
+import { getAppConfig, setAppConfig } from './appconfig';
 import { getSession, type SessionInfo } from './auth';
 
 /**
- * Super-admin gating. Admins are listed in app_config 'admin_emails'
- * (comma-separated). No schema change needed — bans are stored in
- * app_config 'banned_emails' too.
+ * Super-admin gating. The super-admin panel is locked to a single account:
+ * the platform owner. This is enforced in code (not just config) so the
+ * allow-list can never be widened by editing app_config — nobody else can be
+ * granted admin access. Organizer/staff roles are a separate, org-scoped
+ * concept and are unaffected. Bans are stored in app_config 'banned_emails'.
  */
+export const SOLE_ADMIN_EMAIL = 'rajiv@gdf.social';
+
 export async function requireAdmin(): Promise<SessionInfo | null> {
   const session = await getSession();
   if (!session) return null;
-  const admins = await adminEmails();
-  return admins.includes(session.email.toLowerCase()) ? session : null;
+  return session.email.toLowerCase() === SOLE_ADMIN_EMAIL ? session : null;
 }
 
 export async function isAdminEmail(email: string): Promise<boolean> {
-  return (await adminEmails()).includes(email.toLowerCase());
+  return email.trim().toLowerCase() === SOLE_ADMIN_EMAIL;
 }
 
 async function bannedSet(): Promise<Set<string>> {

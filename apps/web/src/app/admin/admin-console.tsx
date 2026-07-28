@@ -26,6 +26,7 @@ export interface AdminOrg {
   slug: string;
   owner: string;
   created_at: string;
+  mymun_url: string | null;
 }
 interface Stats {
   members: number;
@@ -227,7 +228,7 @@ function Organizers({ orgs }: { orgs: AdminOrg[] }) {
         <table className="w-full text-left text-sm">
           <thead className="bg-surface">
             <tr className="text-xs uppercase tracking-wide text-muted">
-              <th className="px-4 py-3">Conference</th><th className="px-4 py-3">Owner</th><th className="px-4 py-3">Created</th>
+              <th className="px-4 py-3">Conference</th><th className="px-4 py-3">Owner</th><th className="px-4 py-3">MyMUN identity</th><th className="px-4 py-3">Created</th>
             </tr>
           </thead>
           <tbody>
@@ -235,10 +236,19 @@ function Organizers({ orgs }: { orgs: AdminOrg[] }) {
               <tr key={o.id} className="border-t border-border/50">
                 <td className="px-4 py-3">{o.name}<span className="block text-xs text-muted">/{o.slug}</span></td>
                 <td className="px-4 py-3">{o.owner}</td>
+                <td className="px-4 py-3">
+                  {o.mymun_url ? (
+                    <a href={o.mymun_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-primary-dark hover:underline">
+                      ✓ Verified<span className="block max-w-[16rem] truncate font-normal text-muted">{o.mymun_url.replace(/^https?:\/\//, '')}</span>
+                    </a>
+                  ) : (
+                    <span className="text-xs text-muted">—</span>
+                  )}
+                </td>
                 <td className="px-4 py-3 text-muted">{o.created_at.slice(0, 10)}</td>
               </tr>
             ))}
-            {orgs.length === 0 ? <tr><td className="px-4 py-6 text-center text-muted" colSpan={3}>No conferences yet.</td></tr> : null}
+            {orgs.length === 0 ? <tr><td className="px-4 py-6 text-center text-muted" colSpan={4}>No conferences yet.</td></tr> : null}
           </tbody>
         </table>
       </div>
