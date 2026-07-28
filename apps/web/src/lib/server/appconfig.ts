@@ -33,9 +33,3 @@ export async function setAppConfig(key: string, value: string): Promise<void> {
 export async function appUrl(): Promise<string> {
   return (await getAppConfig('app_url', 'APP_URL')) ?? 'https://certview.gdf.social';
 }
-
-/** Emails allowed into the super-admin panel. */
-export async function adminEmails(): Promise<string[]> {
-  const raw = (await getAppConfig('admin_emails', 'ADMIN_EMAILS')) ?? 'rajiv@gdf.social';
-  return raw.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean);
-}

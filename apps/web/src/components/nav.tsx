@@ -16,15 +16,15 @@ export async function AppNav() {
         <nav className="flex items-center gap-5 text-sm">
           {session ? (
             <>
-              <Link href="/wallet" className="text-muted transition hover:text-foreground">
+              <Link href="/wallet" data-tour="nav-wallet" className="text-muted transition hover:text-foreground">
                 My credentials
               </Link>
               {session.profile.role !== 'member' ? (
-                <Link href="/org" className="text-muted transition hover:text-foreground">
+                <Link href="/org" data-tour="nav-org" className="text-muted transition hover:text-foreground">
                   Organizer
                 </Link>
               ) : null}
-              <Link href={`/u/${session.profile.public_slug}`} className="text-muted transition hover:text-foreground">
+              <Link href={`/u/${session.profile.public_slug}`} data-tour="nav-profile" className="text-muted transition hover:text-foreground">
                 Public profile
               </Link>
               {admin ? (

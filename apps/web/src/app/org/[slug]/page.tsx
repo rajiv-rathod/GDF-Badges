@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Card } from '@/components/ui';
 import { HelpAssistant } from '@/components/help-assistant';
+import { OnboardingTour } from '@/components/onboarding-tour';
 import { BrandingForm } from './branding-form';
 import { requireOrgStaff } from '@/lib/server/auth';
 import { aiEnabled } from '@/lib/server/gemini';
@@ -59,6 +60,16 @@ export default async function OrgOverviewPage({ params }: { params: Promise<{ sl
 
   return (
     <>
+      <OnboardingTour
+        tourId="org"
+        steps={[
+          { target: 'org-tab-delegates', title: 'Start with your roster', body: 'Import your delegate sheet (XLSX or CSV) once. Every badge and certificate is issued straight from it.', placement: 'bottom' },
+          { target: 'org-tab-issue', title: 'Issue badges', body: 'Award fixed GDF badge templates — Participation, Best Delegate, and more — to any delegate on your roster.', placement: 'bottom' },
+          { target: 'org-tab-certificates', title: 'Design certificates', body: 'Upload your certificate background, drag fields into place, and bulk-issue signed, verifiable PDFs.', placement: 'bottom' },
+          { target: 'org-tab-issued', title: 'Track everything', body: 'See every credential you have issued, remind unclaimed delegates, and revoke instantly if needed.', placement: 'bottom' },
+          { target: 'org-branding', title: 'Make it yours', body: 'Add your conference logo and accent colour so credentials carry your brand alongside GDF.', placement: 'top' },
+        ]}
+      />
       <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-5">
         {stats.map((s) => (
           <Card key={s.label} className="!p-4 text-center">
@@ -95,7 +106,7 @@ export default async function OrgOverviewPage({ params }: { params: Promise<{ sl
           </Link>
         ))}
       </div>
-      <div className="mt-8">
+      <div className="mt-8" data-tour="org-branding">
         <BrandingForm
           orgId={ctx.org.id}
           initialLogo={brand.logo_url ?? null}

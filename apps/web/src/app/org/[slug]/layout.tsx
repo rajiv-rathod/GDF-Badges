@@ -5,11 +5,11 @@ import { AppNav } from '@/components/nav';
 import { requireOrgStaff } from '@/lib/server/auth';
 
 const TABS = [
-  { href: '', label: 'Overview' },
-  { href: '/delegates', label: 'Delegates' },
-  { href: '/issue', label: 'Issue badges' },
-  { href: '/certificates', label: 'Certificates' },
-  { href: '/credentials', label: 'Issued' },
+  { href: '', label: 'Overview', tour: 'org-tab-overview' },
+  { href: '/delegates', label: 'Delegates', tour: 'org-tab-delegates' },
+  { href: '/issue', label: 'Issue badges', tour: 'org-tab-issue' },
+  { href: '/certificates', label: 'Certificates', tour: 'org-tab-certificates' },
+  { href: '/credentials', label: 'Issued', tour: 'org-tab-issued' },
 ];
 
 export default async function OrgLayout({
@@ -34,6 +34,7 @@ export default async function OrgLayout({
               <Link
                 key={tab.href}
                 href={`/org/${slug}${tab.href}`}
+                data-tour={tab.tour}
                 className="whitespace-nowrap rounded-t-md px-4 py-2 font-semibold text-muted transition hover:bg-surface hover:text-foreground"
               >
                 {tab.label}
