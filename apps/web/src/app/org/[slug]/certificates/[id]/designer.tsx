@@ -49,6 +49,48 @@ const PAGE_RATIOS: Record<string, number> = {
 
 const newId = (p: string) => `${p}_${Math.random().toString(36).slice(2, 8)}`;
 
+/**
+ * Normalise ANY browser-decodable image (PNG, JPG, WebP, SVG, GIF, AVIF, BMP…)
+ * into a PNG (or JPEG when large) before upload. This means organizers can drop
+ * in whatever they have, and the stored asset is always a format pdf-lib can
+ * embed — so it renders both in the editor and on the final certificate PDF.
+ */
+async function normalizeImage(file: File): Promise<File> {
+  const dataUrl: string = await new Promise((res, rej) => {
+    const fr = new FileReader();
+    fr.onload = () => res(fr.result as string);
+    fr.onerror = () => rej(new Error('Could not read that file.'));
+    fr.readAsDataURL(file);
+  });
+  const img: HTMLImageElement = await new Promise((res, rej) => {
+    const im = new Image();
+    im.onload = () => res(im);
+    im.onerror = () => rej(new Error('That image could not be decoded. Try a PNG, JPG, WebP or SVG.'));
+    im.src = dataUrl;
+  });
+  let w = img.naturalWidth || 1200;
+  let h = img.naturalHeight || Math.round(w * 0.707); // SVGs may lack an intrinsic size
+  const MAX = 2200;
+  if (Math.max(w, h) > MAX) {
+    const s = MAX / Math.max(w, h);
+    w = Math.round(w * s);
+    h = Math.round(h * s);
+  }
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const cx = canvas.getContext('2d');
+  if (!cx) throw new Error('Could not process this image.');
+  cx.drawImage(img, 0, 0, w, h);
+  let blob: Blob | null = await new Promise((r) => canvas.toBlob(r, 'image/png'));
+  if (blob && blob.size > 4 * 1024 * 1024) {
+    blob = await new Promise((r) => canvas.toBlob(r, 'image/jpeg', 0.9));
+  }
+  if (!blob) throw new Error('Could not process this image (it may reference blocked external content).');
+  const ext = blob.type === 'image/jpeg' ? 'jpg' : 'png';
+  return new File([blob], `image.${ext}`, { type: blob.type });
+}
+
 /** Normalise stored/legacy layout into editor elements (id + type always present). */
 function normalize(raw: unknown[]): El[] {
   return (raw ?? []).map((r, i) => {
@@ -155,6 +197,7 @@ export function Designer({ orgId, orgSlug, template }: { orgId: string; orgSlug:
 
   // ---- add elements ----
   function add(type: CertElementType, extra: Partial<El> = {}) {
+    // Type defaults first, then `extra` wins last (so a passed-in url/text is kept).
     const base: El = {
       id: newId(type),
       type,
@@ -166,7 +209,6 @@ export function Designer({ orgId, orgSlug, template }: { orgId: string; orgSlug:
       weight: 400,
       align: 'left',
       color: '#1b1440',
-      ...extra,
     };
     if (type === 'rect' || type === 'ellipse') Object.assign(base, { height: 12, fill: '#d73cbe', opacity: 1 });
     if (type === 'line') Object.assign(base, { height: 0, color: '#1b1440', thickness: 1.5 });
@@ -174,6 +216,7 @@ export function Designer({ orgId, orgSlug, template }: { orgId: string; orgSlug:
     if (type === 'text') Object.assign(base, { text: 'New text' });
     if (type === 'field') Object.assign(base, { key: uniqueKey(), sample: 'Sample text' });
     if (type === 'verification') Object.assign(base, { vmode: 'both', size: 8, color: '#6f6690', width: 60, y: 90 });
+    Object.assign(base, extra);
     setEls((l) => [...l, base]);
     setSelId(base.id);
   }
@@ -203,9 +246,10 @@ export function Designer({ orgId, orgSlug, template }: { orgId: string; orgSlug:
 
   // ---- uploads ----
   async function upload(file: File): Promise<string | null> {
+    const normalized = await normalizeImage(file); // any format → PNG/JPEG
     const form = new FormData();
     form.set('org_id', orgId);
-    form.set('file', file);
+    form.set('file', normalized);
     const res = await fetch('/api/upload', { method: 'POST', body: form });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error ?? 'Upload failed');
@@ -316,8 +360,8 @@ export function Designer({ orgId, orgSlug, template }: { orgId: string; orgSlug:
             {bgUrl ? <button className="rounded-full border border-border px-3 py-1 font-semibold text-muted hover:border-danger" onClick={() => setBgUrl('')}>Clear bg</button> : null}
           </div>
 
-          <input ref={fileInput} type="file" accept="image/png,image/jpeg" className="hidden" onChange={(e) => { if (e.target.files?.[0]) uploadBackground(e.target.files[0]); e.target.value = ''; }} />
-          <input ref={imageInput} type="file" accept="image/png,image/jpeg" className="hidden" onChange={(e) => { if (e.target.files?.[0]) uploadImageEl(e.target.files[0]); e.target.value = ''; }} />
+          <input ref={fileInput} type="file" accept="image/*" className="hidden" onChange={(e) => { if (e.target.files?.[0]) uploadBackground(e.target.files[0]); e.target.value = ''; }} />
+          <input ref={imageInput} type="file" accept="image/*" className="hidden" onChange={(e) => { if (e.target.files?.[0]) uploadImageEl(e.target.files[0]); e.target.value = ''; }} />
 
           <div
             ref={canvasRef}
