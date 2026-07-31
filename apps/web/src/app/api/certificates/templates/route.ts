@@ -3,7 +3,9 @@ import { z } from 'zod';
 import { requireOrgStaffById } from '@/lib/server/auth';
 import { supabaseAdmin } from '@/lib/supabase/server';
 
-const hex = z.string().regex(/^#[0-9a-fA-F]{6}$/);
+// A colour is a 6-digit hex, or the sentinels 'none' / '' (transparent fill,
+// e.g. an outline-only frame). Presets and the "None" fill button use these.
+const hex = z.union([z.string().regex(/^#[0-9a-fA-F]{6}$/), z.literal('none'), z.literal('')]);
 
 // Canva-style mixed elements: text/data fields, static text, images, shapes,
 // lines and the verification stamp. Fields are optional per-kind; the renderer
@@ -47,7 +49,11 @@ const schema = z.object({
 /** Create or update a certificate template (fully-custom, per org). */
 export async function POST(request: Request) {
   const parsed = schema.safeParse(await request.json());
-  if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? 'Invalid template' }, { status: 400 });
+  if (!parsed.success) {
+    const i = parsed.error.issues[0];
+    const where = i?.path?.length ? ` (${i.path.join('.')})` : '';
+    return NextResponse.json({ error: `${i?.message ?? 'Invalid template'}${where}` }, { status: 400 });
+  }
 
   const ctx = await requireOrgStaffById(parsed.data.org_id);
   if (!ctx) return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
