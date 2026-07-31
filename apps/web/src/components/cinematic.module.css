@@ -56,7 +56,8 @@
   pointer-events: none;
 }
 
-/* Soft blurred brand gradient clouds (magenta / violet / blue) */
+/* Soft blurred brand gradient clouds (magenta / violet / blue). Background
+   layers stay put — no pointer parallax — so there's no "force field" feel. */
 .clouds {
   inset: -12%;
   background:
@@ -65,10 +66,10 @@
     radial-gradient(30% 30% at 8% 70%, rgba(150, 180, 245, 0.45) 0%, rgba(150, 180, 245, 0) 100%),
     radial-gradient(30% 30% at 92% 78%, rgba(255, 120, 205, 0.4) 0%, rgba(255, 120, 205, 0) 100%);
   filter: blur(8px);
-  transform: translate3d(calc(var(--px) * -22px), calc(var(--py) * -16px), 0) scale(var(--clouds-scale));
+  transform: scale(var(--clouds-scale));
 }
 
-/* Halftone magenta dot-grid echoing the GDF logo */
+/* Halftone magenta dot-grid echoing the GDF logo — static (no cursor motion) */
 .grid {
   inset: -6%;
   background-image: radial-gradient(rgba(215, 60, 190, 0.16) 1.6px, transparent 1.6px);
@@ -76,36 +77,47 @@
   mask-image: radial-gradient(ellipse 78% 68% at 50% 34%, black 22%, transparent 74%);
   -webkit-mask-image: radial-gradient(ellipse 78% 68% at 50% 34%, black 22%, transparent 74%);
   opacity: var(--grid-op);
-  transform: translate3d(calc(var(--px) * -14px), calc(var(--py) * -10px), 0);
 }
 
 /* Big magenta bloom behind the title */
 .bloom {
   left: 50%;
-  top: 30%;
+  top: 34%;
   width: 70vw;
   height: 70vw;
   max-width: 900px;
   max-height: 900px;
-  background: radial-gradient(circle at center, rgba(255, 69, 225, 0.22) 0%, rgba(255, 69, 225, 0) 62%);
-  transform: translate3d(calc(-50% + var(--px) * 10px), calc(-50% + var(--py) * 10px), 0);
+  background: radial-gradient(circle at center, rgba(255, 69, 225, 0.2) 0%, rgba(255, 69, 225, 0) 62%);
+  transform: translate3d(-50%, -50%, 0);
+}
+
+/* Centered hero stack — kicker + title + intro + CTAs never overlap because
+   they're a single centred column (not separately anchored to top/bottom). */
+.heroStack {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  width: min(1120px, 92vw);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  transform: translate(-50%, -50%);
+  z-index: 3;
 }
 
 /* Hero display title */
 .title {
-  left: 50%;
-  top: clamp(120px, 20vh, 240px);
-  width: min(96vw, 1400px);
   margin: 0;
-  text-align: center;
   font-family: 'Lastica', var(--font-display, sans-serif);
   font-weight: 800;
-  font-size: clamp(3.2rem, 13vw, 12rem);
-  line-height: 0.86;
+  font-size: clamp(2.6rem, 8.4vw, 8rem);
+  line-height: 0.92;
   letter-spacing: -0.02em;
   color: #1b1440;
-  transform: translate3d(-50%, var(--title-y), 0) scale(var(--title-scale));
+  transform: translateY(var(--title-y)) scale(var(--title-scale));
   opacity: var(--title-op);
+  will-change: transform, opacity;
 }
 
 .title .accent {
@@ -126,14 +138,14 @@
   margin-bottom: clamp(14px, 2.4vh, 30px);
 }
 
-/* Intro copy + CTA pills */
+/* Intro copy + CTA pills (inside the hero stack, below the title) */
 .intro {
-  left: 50%;
-  bottom: clamp(56px, 22vh, 260px);
-  width: min(640px, calc(100vw - 40px));
+  margin-top: clamp(22px, 4.5vh, 52px);
+  width: min(600px, 100%);
   text-align: center;
-  transform: translate3d(-50%, var(--intro-y), 0);
+  transform: translateY(var(--intro-y));
   opacity: var(--intro-op);
+  will-change: transform, opacity;
 }
 
 .intro p {

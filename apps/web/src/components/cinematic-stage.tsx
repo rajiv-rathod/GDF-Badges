@@ -134,11 +134,20 @@ export function CinematicStage() {
           <div className={`${styles.layer} ${styles.grid}`} aria-hidden />
           <div className={`${styles.layer} ${styles.bloom}`} aria-hidden />
 
-          {/* Hero title */}
-          <h1 className={`${styles.layer} ${styles.title}`}>
-            <span className={styles.kicker}>Powered by the Global Diplomacy Forum</span>
-            Verify every <span className={styles.accent}>credential.</span>
-          </h1>
+          {/* Hero stack: kicker + title + intro + CTAs (single centred column) */}
+          <div className={styles.heroStack}>
+            <h1 className={styles.title}>
+              <span className={styles.kicker}>Powered by the Global Diplomacy Forum</span>
+              Verify every <span className={styles.accent}>credential.</span>
+            </h1>
+            <div className={styles.intro}>
+              <p>A free, Credly-style credentialing platform built for Model UN — issue verifiable badges &amp; certificates your delegates keep for life.</p>
+              <div className={styles.ctaRow}>
+                <a href="/signup" className={styles.ctaPrimary}>Issue credentials</a>
+                <a href="/login" className={styles.ctaGhost}>Claim your badge</a>
+              </div>
+            </div>
+          </div>
 
           {/* Certificate mockup (issue beat) */}
           <div className={`${styles.layer} ${styles.cert}`} aria-hidden>
@@ -168,15 +177,6 @@ export function CinematicStage() {
           <div className={`${styles.panel} ${styles.panelVerify}`}>
             <h2>Signed. Sealed. <em>Verifiable.</em></h2>
             <p>Every credential carries a unique Certificate ID and a cryptographic signature, provable by anyone at a public verify page.</p>
-          </div>
-
-          {/* Intro copy + CTAs */}
-          <div className={`${styles.layer} ${styles.intro}`}>
-            <p>A free, Credly-style credentialing platform built for Model UN — issue verifiable badges &amp; certificates your delegates keep for life.</p>
-            <div className={styles.ctaRow}>
-              <a href="/signup" className={styles.ctaPrimary}>Issue credentials</a>
-              <a href="/login" className={styles.ctaGhost}>Claim your badge</a>
-            </div>
           </div>
 
           <span className={styles.cue} aria-hidden>Scroll</span>
