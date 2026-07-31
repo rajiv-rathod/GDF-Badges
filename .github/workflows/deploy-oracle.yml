@@ -1,0 +1,40 @@
+# Auto-deploy to your Oracle server on every merge to main.
+#
+# Opt-in: this job only runs when the repo variable DEPLOY_ENABLED == 'true'.
+# Set it and the secrets once (Settings → Secrets and variables → Actions):
+#   Variable  DEPLOY_ENABLED = true
+#   Secret    DEPLOY_HOST    = your.oracle.public.ip
+#   Secret    DEPLOY_USER    = ubuntu
+#   Secret    DEPLOY_SSH_KEY = <private key whose public half is in ~/.ssh/authorized_keys on the box>
+#   Secret    DEPLOY_PATH    = /home/ubuntu/GDF-Badges         (the cloned repo)
+#   Secret    DEPLOY_PORT    = 22                              (optional)
+#
+# After that, merging a PR to main rebuilds and restarts the app on Oracle —
+# no manual SSH. See docs/SELF-HOSTING.md for the one-time server setup.
+name: Deploy to Oracle
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-oracle
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    if: ${{ vars.DEPLOY_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT || 22 }}
+          command_timeout: 20m
+          script_stop: true
+          script: |
+            bash "${{ secrets.DEPLOY_PATH }}/scripts/server-deploy.sh"

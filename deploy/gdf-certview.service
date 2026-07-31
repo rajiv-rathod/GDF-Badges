@@ -1,0 +1,26 @@
+# GDF CertView — Next.js standalone server, managed by systemd.
+# Install:  sudo cp deploy/gdf-certview.service /etc/systemd/system/
+#           sudo systemctl daemon-reload && sudo systemctl enable --now gdf-certview
+# Adjust User / paths below if your clone lives elsewhere.
+[Unit]
+Description=GDF CertView (Next.js standalone)
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+# Run from inside the standalone app dir so relative asset paths resolve.
+WorkingDirectory=/home/ubuntu/GDF-Badges/apps/web/.next/standalone/apps/web
+# Secrets live here (see SELF-HOSTING.md) — never commit this file.
+EnvironmentFile=/etc/gdf-certview.env
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=HOSTNAME=127.0.0.1
+ExecStart=/usr/bin/node /home/ubuntu/GDF-Badges/apps/web/.next/standalone/apps/web/server.js
+Restart=always
+RestartSec=3
+# Give the 1 GB box a little headroom before the OOM killer steps in.
+Environment=NODE_OPTIONS=--max-old-space-size=768
+
+[Install]
+WantedBy=multi-user.target
