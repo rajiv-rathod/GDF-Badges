@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireOrgStaffById } from '@/lib/server/auth';
 import { renderCertificatePdf } from '@/lib/server/certificates';
-import type { CertificateField, CertificateTemplate } from '@gdf/shared';
+import type { CertElement, CertificateTemplate } from '@gdf/shared';
 
 const schema = z.object({
   org_id: z.string().uuid(),
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
   const pdf = await renderCertificatePdf(
     {
       background_url: parsed.data.background_url,
-      layout_json: parsed.data.layout_json as CertificateField[],
+      layout_json: parsed.data.layout_json as CertElement[],
       page_size: parsed.data.page_size as CertificateTemplate['page_size'],
     },
     parsed.data.values,
