@@ -1,16 +1,22 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useRef, useState } from 'react';
-import type { CertificateField } from '@gdf/shared';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { parseWorkbook, type ParsedWorkbook } from '@/lib/sheet';
 import { buttonClass, Card, ErrorBox, inputClass, PageTitle } from '@/components/ui';
+
+/** layout_json is a mixed element list — only `field` elements are mappable. */
+interface LayoutElement {
+  key?: string;
+  label?: string;
+  type?: string;
+}
 
 interface Template {
   id: string;
   name: string;
   background_url: string;
-  layout_json: CertificateField[];
+  layout_json: LayoutElement[];
   page_size: string;
 }
 
@@ -23,17 +29,21 @@ interface IssuedRow {
 
 const EMAIL_KEY = '__recipient_email__';
 const NAME_KEY = 'recipient_name';
+/** Sentinel in the mapping select: this target uses a typed fixed value. */
+const FIXED = '__fixed_value__';
 
 /**
  * The Canva-bulk-create flow: import a sheet → map its columns to the
- * template's fields → preview the first rows → issue one signed certificate
- * per row with live progress.
+ * template's fields (or give a field a custom fixed value that applies to
+ * every row) → preview → issue one signed certificate per row.
+ * Mappings, fixed values, event name and skills are remembered per template.
  */
 export function BulkIssue({ orgId, template, aiEnabled }: { orgId: string; template: Template; aiEnabled: boolean }) {
   const fileInput = useRef<HTMLInputElement>(null);
   const [rows, setRows] = useState<Array<Record<string, string>>>([]);
   const [columns, setColumns] = useState<string[]>([]);
   const [mapping, setMapping] = useState<Record<string, string>>({});
+  const [fixed, setFixed] = useState<Record<string, string>>({});
   const [eventName, setEventName] = useState('');
   const [skills, setSkills] = useState('');
   const [expires, setExpires] = useState('');
@@ -46,10 +56,44 @@ export function BulkIssue({ orgId, template, aiEnabled }: { orgId: string; templ
   const [sheetNames, setSheetNames] = useState<string[]>([]);
   const [sheet, setSheet] = useState('');
 
-  const targets = useMemo(() => {
-    const fieldKeys = template.layout_json.map((f) => f.key);
-    return [EMAIL_KEY, ...(fieldKeys.includes(NAME_KEY) ? [] : [NAME_KEY]), ...fieldKeys];
-  }, [template.layout_json]);
+  // Only data fields have keys — shapes/text/verification elements don't.
+  const fieldKeys = useMemo(
+    () =>
+      template.layout_json
+        .filter((f) => (f.type === 'field' || !f.type) && typeof f.key === 'string' && f.key)
+        .map((f) => f.key as string),
+    [template.layout_json],
+  );
+
+  const targets = useMemo(
+    () => [EMAIL_KEY, ...(fieldKeys.includes(NAME_KEY) ? [] : [NAME_KEY]), ...fieldKeys],
+    [fieldKeys],
+  );
+
+  // ---- persistence: settings survive reloads, per template ("permanent") ----
+  const storeKey = `gdf_bulk_${template.id}`;
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(window.localStorage.getItem(storeKey) ?? 'null');
+      if (saved) {
+        if (saved.mapping) setMapping(saved.mapping);
+        if (saved.fixed) setFixed(saved.fixed);
+        if (saved.eventName) setEventName(saved.eventName);
+        if (saved.skills) setSkills(saved.skills);
+        if (saved.expires) setExpires(saved.expires);
+      }
+    } catch {
+      /* ignore corrupt saved state */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(storeKey, JSON.stringify({ mapping, fixed, eventName, skills, expires }));
+    } catch {
+      /* storage may be unavailable — fine */
+    }
+  }, [storeKey, mapping, fixed, eventName, skills, expires]);
 
   function loadSheet(name: string) {
     try {
@@ -58,13 +102,18 @@ export function BulkIssue({ orgId, template, aiEnabled }: { orgId: string; templ
       setSheet(name);
       setColumns(cols);
       setRows(parsed);
-      const auto: Record<string, string> = {};
-      for (const target of [EMAIL_KEY, NAME_KEY, ...template.layout_json.map((f) => f.key)]) {
-        const wanted = target === EMAIL_KEY ? 'email' : target;
-        const hit = cols.find((c) => c.toLowerCase().replace(/[^a-z0-9]/g, '_').includes(wanted.replace(/[^a-z0-9]/g, '_').slice(0, 6)));
-        if (hit) auto[target] = hit;
-      }
-      setMapping(auto);
+      // Auto-map by fuzzy header match — never overwrite an existing choice
+      // (saved mappings and fixed values are kept).
+      setMapping((prev) => {
+        const auto: Record<string, string> = { ...prev };
+        for (const target of targets) {
+          if (auto[target]) continue;
+          const wanted = (target === EMAIL_KEY ? 'email' : target).toLowerCase().replace(/[^a-z0-9]/g, '_');
+          const hit = cols.find((c) => c.toLowerCase().replace(/[^a-z0-9]/g, '_').includes(wanted.slice(0, 6)));
+          if (hit) auto[target] = hit;
+        }
+        return auto;
+      });
     } catch (err) {
       setError((err as Error).message);
     }
@@ -86,9 +135,14 @@ export function BulkIssue({ orgId, template, aiEnabled }: { orgId: string; templ
   function valuesForRow(row: Record<string, string>): Record<string, string> {
     const values: Record<string, string> = {};
     for (const [target, column] of Object.entries(mapping)) {
-      if (target !== EMAIL_KEY && column && row[column] !== undefined) values[target] = row[column];
+      if (target === EMAIL_KEY) continue;
+      if (column === FIXED) {
+        if (fixed[target]?.trim()) values[target] = fixed[target].trim();
+      } else if (column && row[column] !== undefined) {
+        values[target] = row[column];
+      }
     }
-    if (eventName && !values.event_name && template.layout_json.some((f) => f.key === 'event_name')) {
+    if (eventName && !values.event_name && fieldKeys.includes('event_name')) {
       values.event_name = eventName;
     }
     return values;
@@ -138,8 +192,8 @@ export function BulkIssue({ orgId, template, aiEnabled }: { orgId: string; templ
   }
 
   async function issueAll() {
-    if (!mapping[EMAIL_KEY]) {
-      setError('Map the recipient email column first.');
+    if (!mapping[EMAIL_KEY] || mapping[EMAIL_KEY] === FIXED) {
+      setError('Map the recipient email to a sheet column first.');
       return;
     }
     if (!eventName) {
@@ -154,7 +208,9 @@ export function BulkIssue({ orgId, template, aiEnabled }: { orgId: string; templ
       setProgress(i);
       const row = rows[i];
       const email = row[mapping[EMAIL_KEY]] ?? '';
-      const name = row[mapping[NAME_KEY] ?? ''] ?? email.split('@')[0];
+      const nameCol = mapping[NAME_KEY];
+      const name =
+        (nameCol === FIXED ? fixed[NAME_KEY] : nameCol ? row[nameCol] : '') || email.split('@')[0];
       try {
         const res = await fetch('/api/certificates/issue-one', {
           method: 'POST',
@@ -227,7 +283,9 @@ export function BulkIssue({ orgId, template, aiEnabled }: { orgId: string; templ
           </label>
         </div>
       ) : null}
-      <p className="mt-2 text-xs text-muted">Any spreadsheet works — .xlsx, .xls, .csv, .tsv or .ods. Multi-tab workbooks let you pick the sheet.</p>
+      <p className="mt-2 text-xs text-muted">
+        Any spreadsheet works — .xlsx, .xls, .csv, .tsv or .ods. Your mappings, fixed values and event name are remembered for this template.
+      </p>
 
       {error ? <div className="mt-4"><ErrorBox message={error} /></div> : null}
 
@@ -235,24 +293,37 @@ export function BulkIssue({ orgId, template, aiEnabled }: { orgId: string; templ
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
           <Card>
             <h2 className="font-display font-semibold">2 · Map columns → fields</h2>
-            <p className="mt-1 text-xs text-muted">{rows.length} rows loaded.</p>
+            <p className="mt-1 text-xs text-muted">
+              {rows.length} rows loaded. Pick a sheet column per field — or choose <em>Custom value</em> to type one value that applies to every certificate.
+            </p>
             <div className="mt-4 grid gap-3">
               {targets.map((target) => (
-                <label key={target} className="grid grid-cols-2 items-center gap-3 text-sm">
+                <div key={target} className="grid grid-cols-2 items-center gap-3 text-sm">
                   <span className={target === EMAIL_KEY ? 'font-semibold text-primary-dark' : ''}>
                     {target === EMAIL_KEY ? 'Recipient email (required)' : target}
                   </span>
-                  <select
-                    className={inputClass}
-                    value={mapping[target] ?? ''}
-                    onChange={(e) => setMapping((m) => ({ ...m, [target]: e.target.value }))}
-                  >
-                    <option value="">— not mapped —</option>
-                    {columns.map((c) => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
-                </label>
+                  <div className="grid gap-1.5">
+                    <select
+                      className={inputClass}
+                      value={mapping[target] ?? ''}
+                      onChange={(e) => setMapping((m) => ({ ...m, [target]: e.target.value }))}
+                    >
+                      <option value="">— not mapped —</option>
+                      {target !== EMAIL_KEY ? <option value={FIXED}>✏️ Custom value (same for all rows)</option> : null}
+                      {columns.map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                    {mapping[target] === FIXED ? (
+                      <input
+                        className={inputClass}
+                        placeholder="Type the value used on every certificate"
+                        value={fixed[target] ?? ''}
+                        onChange={(e) => setFixed((f) => ({ ...f, [target]: e.target.value }))}
+                      />
+                    ) : null}
+                  </div>
+                </div>
               ))}
             </div>
             <div className="mt-5 flex gap-3">
