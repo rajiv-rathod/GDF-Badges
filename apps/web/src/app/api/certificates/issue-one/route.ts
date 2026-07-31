@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireOrgStaffById } from '@/lib/server/auth';
-import { renderCertificatePdf } from '@/lib/server/certificates';
+import { renderCertificatePdf, CERT_ID_KEY, CERT_URL_KEY } from '@/lib/server/certificates';
 import { issueCredential } from '@/lib/server/credentials';
 import { sendCredentialEmail } from '@/lib/server/email';
 import { appUrl } from '@/lib/server/appconfig';
 import { clientKey, rateLimit } from '@/lib/server/ratelimit';
 import { supabaseAdmin } from '@/lib/supabase/server';
-import type { CertificateField, CertificateTemplate } from '@gdf/shared';
+import type { CertificateTemplate } from '@gdf/shared';
 
 const schema = z.object({
   org_id: z.string().uuid(),
@@ -46,22 +46,15 @@ export async function POST(request: Request) {
 
   // Render uses only the visual field values; skills/evidence/expiry are
   // credential metadata folded into the signed fields (not drawn on the PDF).
-  const renderValues = { ...parsed.data.values, recipient_name: parsed.data.recipient_name };
+  const renderValues: Record<string, string> = { ...parsed.data.values, recipient_name: parsed.data.recipient_name };
   const skills = (parsed.data.skills ?? []).map((s) => s.trim()).filter(Boolean);
   const values: Record<string, string> = { ...renderValues };
   if (skills.length) values.skills = skills.join(', ');
   if (parsed.data.evidence?.trim()) values.evidence = parsed.data.evidence.trim();
   if (parsed.data.expires?.trim()) values.expires = parsed.data.expires.trim();
 
-  const pdf = await renderCertificatePdf(
-    {
-      background_url: template.background_url,
-      layout_json: template.layout_json as CertificateField[],
-      page_size: template.page_size as CertificateTemplate['page_size'],
-    },
-    renderValues,
-  );
-
+  // Issue FIRST so the credential's verification_code exists, then render with
+  // the reserved keys — the printed Certificate ID always matches the verify URL.
   const issued = await issueCredential(admin, {
     type: 'certificate',
     orgId: ctx.org.id,
@@ -72,6 +65,19 @@ export async function POST(request: Request) {
     eventName: parsed.data.event_name,
     issuedBy: ctx.session.userId,
   });
+
+  const origin = await appUrl();
+  renderValues[CERT_ID_KEY] = issued.verification_code;
+  renderValues[CERT_URL_KEY] = `${origin.replace(/^https?:\/\//, '')}/verify/${issued.verification_code}`;
+
+  const pdf = await renderCertificatePdf(
+    {
+      background_url: template.background_url,
+      layout_json: template.layout_json as CertificateTemplate['layout_json'],
+      page_size: template.page_size as CertificateTemplate['page_size'],
+    },
+    renderValues,
+  );
 
   const path = `${ctx.org.slug}/${issued.verification_code}.pdf`;
   let assetUrl: string | null = null;
@@ -84,7 +90,6 @@ export async function POST(request: Request) {
     await admin.from('credentials').update({ asset_url: assetUrl }).eq('id', issued.id);
   }
 
-  const origin = await appUrl();
   const { data: templateName } = await admin
     .from('certificate_templates')
     .select('name')

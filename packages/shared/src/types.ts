@@ -43,7 +43,7 @@ export interface BadgeTemplate {
   criteria: string;
 }
 
-/** One positioned field on a certificate template (Canva-style layout). */
+/** One positioned data field on a certificate template (legacy text field). */
 export interface CertificateField {
   key: string;
   label: string;
@@ -58,12 +58,68 @@ export interface CertificateField {
   sample: string;
 }
 
+/**
+ * Canva-style layout element. A template's layout_json is an ordered list of
+ * these (paint order = array order). All positions are percentages of the page
+ * (x/y from the left/top). `type` is optional for backwards compatibility —
+ * a legacy element with no `type` is treated as a data `field`.
+ */
+export type CertElementType = 'field' | 'text' | 'image' | 'rect' | 'ellipse' | 'line' | 'verification';
+
+export interface CertElementBase {
+  id: string;
+  type?: CertElementType;
+  x: number;
+  y: number;
+  width: number;
+}
+
+/** Text-like element: a data field, static text, or the verification stamp. */
+export interface CertTextElement extends CertElementBase {
+  type?: 'field' | 'text' | 'verification';
+  key?: string;        // field: maps to a sheet column. verification: reserved key.
+  label?: string;
+  text?: string;       // static text content (type 'text')
+  font: string;
+  size: number;
+  weight: number;
+  align: 'left' | 'center' | 'right';
+  color: string;
+  sample?: string;
+  vmode?: 'id' | 'url' | 'both'; // verification only
+}
+
+export interface CertImageElement extends CertElementBase {
+  type: 'image';
+  url: string;
+  height: number;
+  opacity?: number;
+}
+
+export interface CertShapeElement extends CertElementBase {
+  type: 'rect' | 'ellipse';
+  height: number;
+  fill: string;
+  stroke?: string;
+  strokeWidth?: number;
+  opacity?: number;
+}
+
+export interface CertLineElement extends CertElementBase {
+  type: 'line';
+  height: number;
+  color: string;
+  thickness: number;
+}
+
+export type CertElement = CertTextElement | CertImageElement | CertShapeElement | CertLineElement;
+
 export interface CertificateTemplate {
   id: string;
   org_id: string;
   name: string;
   background_url: string;
-  layout_json: CertificateField[];
+  layout_json: CertElement[];
   page_size: 'A4-landscape' | 'A4-portrait' | 'letter-landscape' | 'letter-portrait';
   created_by: string;
 }

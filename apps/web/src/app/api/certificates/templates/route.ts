@@ -3,26 +3,44 @@ import { z } from 'zod';
 import { requireOrgStaffById } from '@/lib/server/auth';
 import { supabaseAdmin } from '@/lib/supabase/server';
 
-const fieldSchema = z.object({
-  key: z.string().min(1).max(60),
-  label: z.string().max(120).default(''),
-  x: z.number().min(0).max(100),
-  y: z.number().min(0).max(100),
-  width: z.number().min(1).max(100),
-  font: z.string().max(60).default('Helvetica'),
-  size: z.number().min(6).max(120),
-  weight: z.number().min(100).max(900).default(400),
-  align: z.enum(['left', 'center', 'right']).default('left'),
-  color: z.string().regex(/^#[0-9a-fA-F]{6}$/).default('#06002e'),
-  sample: z.string().max(200).default(''),
-});
+const hex = z.string().regex(/^#[0-9a-fA-F]{6}$/);
+
+// Canva-style mixed elements: text/data fields, static text, images, shapes,
+// lines and the verification stamp. Fields are optional per-kind; the renderer
+// applies sensible defaults, so we validate a permissive superset with bounds.
+const elementSchema = z
+  .object({
+    id: z.string().max(80).optional(),
+    type: z.enum(['field', 'text', 'image', 'rect', 'ellipse', 'line', 'verification']).optional(),
+    x: z.number().min(-20).max(120),
+    y: z.number().min(-20).max(120),
+    width: z.number().min(0).max(200),
+    height: z.number().min(0).max(200).optional(),
+    key: z.string().max(60).optional(),
+    label: z.string().max(120).optional(),
+    text: z.string().max(400).optional(),
+    font: z.string().max(60).optional(),
+    size: z.number().min(4).max(200).optional(),
+    weight: z.number().min(100).max(900).optional(),
+    align: z.enum(['left', 'center', 'right']).optional(),
+    color: hex.optional(),
+    fill: hex.optional(),
+    stroke: hex.optional(),
+    strokeWidth: z.number().min(0).max(40).optional(),
+    opacity: z.number().min(0).max(1).optional(),
+    thickness: z.number().min(0).max(40).optional(),
+    sample: z.string().max(200).optional(),
+    vmode: z.enum(['id', 'url', 'both']).optional(),
+    url: z.string().max(1000).optional(),
+  })
+  .passthrough();
 
 const schema = z.object({
   id: z.string().uuid().optional(),
   org_id: z.string().uuid(),
   name: z.string().min(1).max(120),
   background_url: z.string().default(''),
-  layout_json: z.array(fieldSchema).max(40),
+  layout_json: z.array(elementSchema).max(80),
   page_size: z.enum(['A4-landscape', 'A4-portrait', 'letter-landscape', 'letter-portrait']),
 });
 
