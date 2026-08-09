@@ -93,7 +93,11 @@ function drawTextValue(page: PDFPage, font: PDFFont, el: RawEl, value: string, p
   const boxX = (num(el.x) / 100) * pw;
   const boxW = (num(el.width, 40) / 100) * pw;
   const color = hexToRgb(str(el.color, '#1b1440'));
-  const lines = wrapLines(font, value, size, boxW);
+  // Headline-size fields (names, titles) get few lines so an unusually long
+  // value can't cascade over the elements laid out below; body-size text
+  // (descriptions) may wrap deeper. Explicit el.maxLines always wins.
+  const defaultMax = size > 20 ? 2 : size > 13 ? 4 : 10;
+  const lines = wrapLines(font, value, size, boxW, num(el.maxLines, defaultMax));
   lines.forEach((line, i) => {
     const textW = font.widthOfTextAtSize(line, size);
     let x = boxX;

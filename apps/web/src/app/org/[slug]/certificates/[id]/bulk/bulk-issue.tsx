@@ -103,6 +103,7 @@ export function BulkIssue({ orgId, template, aiEnabled }: { orgId: string; templ
       setSheet(name);
       setColumns(cols);
       setRows(parsed);
+      setAiDesc([]); // drafted descriptions are positional — stale after any row change
       // Auto-map by fuzzy header match — never overwrite an existing choice
       // (saved mappings and fixed values are kept).
       setMapping((prev) => {
@@ -194,6 +195,7 @@ export function BulkIssue({ orgId, template, aiEnabled }: { orgId: string; templ
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'AI cleanup failed');
       setRows(data.rows);
+      setAiDesc([]); // row order/count may have changed — re-draft descriptions
     } catch (err) {
       setError((err as Error).message);
     } finally {

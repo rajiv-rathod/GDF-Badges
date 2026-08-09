@@ -80,10 +80,18 @@ export async function issueCredential(admin: SupabaseClient, input: IssueInput):
   return { id, verification_code, status: existing ? 'claimed' : 'issued', recipient_email: email };
 }
 
+/** Reserved fields_json key holding the pre-correction name (signed, so the disclosure is tamper-evident). */
+export const NAME_HISTORY_KEY = '__original_name';
+
 /**
  * Recipient name correction ("fix my name"). Rebuilds the canonical credential
- * with the new name and re-signs it, so the verify page stays VERIFIED. Only
- * the claimed recipient may do this; revoked credentials are immutable.
+ * with the new name and re-signs it, so the verify page stays VERIFIED — but
+ * bounded so it cannot become a re-attestation loophole:
+ *   - only the claimed recipient, and only while not revoked;
+ *   - ONE correction per credential, ever;
+ *   - the original name is kept in the signed fields (NAME_HISTORY_KEY) and
+ *     disclosed on the public verify page;
+ *   - a 'renamed' audit event is recorded.
  * issued_at is re-serialized with toISOString(), which byte-matches the
  * verify RPC's to_char(... 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') format.
  */
@@ -106,6 +114,10 @@ export async function renameCredential(
   if (row.status === 'revoked') throw new Error('This credential has been revoked and can no longer be changed');
 
   const fields = { ...(row.fields_json as Record<string, string>) };
+  if (typeof fields[NAME_HISTORY_KEY] === 'string') {
+    throw new Error('The name on this credential has already been corrected once. Ask the issuing conference to re-issue it if it is still wrong.');
+  }
+  fields[NAME_HISTORY_KEY] = row.recipient_name;
   if (typeof fields.recipient_name === 'string') fields.recipient_name = name;
 
   const canonical: CanonicalCredential = {
@@ -127,6 +139,7 @@ export async function renameCredential(
     .update({ recipient_name: name, fields_json: fields, signature })
     .eq('id', row.id);
   if (error) throw new Error(`Rename failed: ${error.message}`);
+  await admin.from('credential_events').insert({ credential_id: row.id, event: 'renamed' });
   return { verification_code: row.verification_code };
 }
 

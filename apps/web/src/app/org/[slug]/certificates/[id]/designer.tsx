@@ -256,9 +256,13 @@ export function Designer({ orgId, orgSlug, template }: { orgId: string; orgSlug:
     if (!res.ok) throw new Error(data.error ?? 'Upload failed');
     return data.url as string;
   }
-  /** True for decorative rects that blanket (almost) the whole page. */
+  /**
+   * True only for OPAQUE rects blanketing the whole page (a preset's colour
+   * base). Translucent full-page rects are deliberate overlay scrims and are
+   * kept — they tint an uploaded background rather than hide it.
+   */
   const isFullPageRect = (e: El) =>
-    e.type === 'rect' && e.x <= 1 && e.y <= 1 && e.width >= 98 && (e.height ?? 0) >= 98 && e.fill !== 'none';
+    e.type === 'rect' && e.x <= 1 && e.y <= 1 && e.width >= 98 && (e.height ?? 0) >= 98 && e.fill !== 'none' && (e.opacity ?? 1) >= 0.99;
 
   async function uploadBackground(file: File) {
     setBusy('upload'); setError('');

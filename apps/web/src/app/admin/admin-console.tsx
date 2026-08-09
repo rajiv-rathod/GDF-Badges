@@ -351,11 +351,14 @@ function Broadcast({ stats }: { stats: Stats }) {
   const [previewHtml, setPreviewHtml] = useState('');
 
   // Debounced live preview: fetch the real branded shell from the server.
+  // The cancelled flag stops a late response from a superseded keystroke
+  // overwriting newer state (clearTimeout can't cancel an in-flight fetch).
   useEffect(() => {
     if (mode !== 'html' || !body.trim()) {
       setPreviewHtml('');
       return;
     }
+    let cancelled = false;
     const timer = setTimeout(async () => {
       try {
         const res = await fetch('/api/admin/broadcast', {
@@ -363,12 +366,16 @@ function Broadcast({ stats }: { stats: Stats }) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ preview: true, body }),
         });
-        if (res.ok) setPreviewHtml((await res.json()).html ?? '');
+        const html = res.ok ? ((await res.json()).html ?? '') : null;
+        if (!cancelled && html !== null) setPreviewHtml(html);
       } catch {
         // preview is best-effort — keep the last good render
       }
     }, 400);
-    return () => clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [body, mode]);
 
   async function post(payload: Record<string, unknown>, label: string) {
