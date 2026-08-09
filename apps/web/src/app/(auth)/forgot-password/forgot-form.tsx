@@ -77,7 +77,7 @@ export function ForgotPasswordForm() {
       <h1 className="font-display text-2xl font-bold">Reset your password</h1>
       {step === 'email' ? (
         <>
-          <p className="mt-1 text-sm text-muted">Enter your account email and we&apos;ll send you a 6-digit code.</p>
+          <p className="mt-1 text-sm text-muted">Enter your account email and we&apos;ll send you a one-time code.</p>
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -104,15 +104,15 @@ export function ForgotPasswordForm() {
       {step === 'code' ? (
         <>
           <p className="mt-1 text-sm text-muted">
-            If an account exists for <span className="font-semibold text-foreground">{email}</span>, a 6-digit code is on
-            its way. Enter it below with your new password.
+            If an account exists for <span className="font-semibold text-foreground">{email}</span>, a one-time code is
+            on its way. Enter it below with your new password.
           </p>
           <form onSubmit={submitReset} className="mt-6 flex flex-col gap-4">
             <input
               className={`${inputClass} text-center text-xl tracking-[0.4em]`}
               inputMode="numeric"
               autoComplete="one-time-code"
-              placeholder="123456"
+              placeholder="Enter code"
               value={code}
               required
               minLength={4}

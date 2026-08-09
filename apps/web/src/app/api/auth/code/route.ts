@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { isBanned } from '@/lib/server/admin';
+import { escapeIlike } from '@/lib/server/credentials';
 import { sendAuthCode } from '@/lib/server/email';
 import { clientKey, rateLimit } from '@/lib/server/ratelimit';
 import { supabaseAdmin } from '@/lib/supabase/server';
@@ -38,15 +39,27 @@ export async function POST(request: Request) {
 
   if (await isBanned(email)) return generic;
 
+  const admin = supabaseAdmin();
+
+  // Explicit existence check: on current GoTrue, generateLink('magiclink') for
+  // an unknown email AUTO-CREATES the user (it does not error as older
+  // versions did) — which would mint phantom accounts that never accepted the
+  // terms. Unknown emails get the same generic ok, with nothing generated.
+  const { data: existing } = await admin
+    .from('profiles')
+    .select('id')
+    .ilike('email', escapeIlike(email))
+    .maybeSingle();
+  if (!existing) return generic;
+
   let code: string | undefined;
   try {
-    const admin = supabaseAdmin();
     const { data, error } = await admin.auth.admin.generateLink({
       type: purpose === 'recovery' ? 'recovery' : 'magiclink',
       email,
     });
-    // For 'magiclink'/'recovery' GoTrue errors when no user exists with this
-    // email — return the same generic ok so account existence never leaks.
+    // Belt-and-braces: if GoTrue still errors (user deleted between checks,
+    // older versions), return the same generic ok so existence never leaks.
     if (error || !data) return generic;
     // The 6-digit OTP lives in data.properties.email_otp; be defensive about
     // the shape across supabase-js versions.

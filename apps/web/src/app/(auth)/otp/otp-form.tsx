@@ -67,7 +67,7 @@ export function OtpForm() {
       <h1 className="font-display text-2xl font-bold">Sign in with a code</h1>
       {step === 'email' ? (
         <>
-          <p className="mt-1 text-sm text-muted">No password needed — we&apos;ll email you a 6-digit one-time code.</p>
+          <p className="mt-1 text-sm text-muted">No password needed — we&apos;ll email you a one-time code.</p>
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -93,15 +93,15 @@ export function OtpForm() {
       ) : (
         <>
           <p className="mt-1 text-sm text-muted">
-            If an account exists for <span className="font-semibold text-foreground">{email}</span>, a 6-digit code is on
-            its way. It expires in 10 minutes.
+            If an account exists for <span className="font-semibold text-foreground">{email}</span>, a one-time code is
+            on its way. It expires in 10 minutes.
           </p>
           <form onSubmit={submitCode} className="mt-6 flex flex-col gap-4">
             <input
               className={`${inputClass} text-center text-xl tracking-[0.4em]`}
               inputMode="numeric"
               autoComplete="one-time-code"
-              placeholder="123456"
+              placeholder="Enter code"
               value={code}
               required
               minLength={4}
