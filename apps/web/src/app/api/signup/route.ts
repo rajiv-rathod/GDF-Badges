@@ -8,6 +8,10 @@ const schema = z.object({
   password: z.string().min(8).max(200),
   full_name: z.string().min(1).max(200),
   role: z.enum(['member', 'organizer']),
+  // Mandatory consent — enforced server-side, not just by the checkbox.
+  terms_accepted: z.literal(true, {
+    errorMap: () => ({ message: 'You must agree to the Terms of Service, Privacy Policy and Data Collection Notice.' }),
+  }),
 });
 
 /**
