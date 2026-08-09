@@ -12,6 +12,7 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
   const [role, setRole] = useState<'member' | 'organizer'>('member');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -29,7 +30,7 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
         const res = await fetch('/api/signup', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password, full_name: fullName, role }),
+          body: JSON.stringify({ email, password, full_name: fullName, role, terms_accepted: termsAccepted }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error ?? 'Could not create your account');
@@ -85,11 +86,37 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
           minLength={8}
           onChange={(e) => setPassword(e.target.value)}
         />
+        {mode === 'login' ? (
+          <p className="-mt-2 text-right text-sm">
+            <Link className="text-primary-dark hover:underline" href="/forgot-password">Forgot password?</Link>
+          </p>
+        ) : null}
+        {mode === 'signup' ? (
+          <label className="flex items-start gap-2.5 text-sm text-muted">
+            <input
+              type="checkbox"
+              required
+              checked={termsAccepted}
+              onChange={(e) => setTermsAccepted(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
+            />
+            <span>
+              I agree to the <Link className="text-primary-dark hover:underline" href="/terms">Terms of Service</Link>,{' '}
+              <Link className="text-primary-dark hover:underline" href="/privacy">Privacy Policy</Link> and{' '}
+              <Link className="text-primary-dark hover:underline" href="/data-collection">Data Collection Notice</Link>.
+            </span>
+          </label>
+        ) : null}
         {error ? <ErrorBox message={error} /> : null}
         {notice ? <p className="rounded-sm border border-primary/50 bg-primary/10 px-4 py-3 text-sm">{notice}</p> : null}
-        <button className={buttonClass.primary} disabled={busy}>
+        <button className={buttonClass.primary} disabled={busy || (mode === 'signup' && !termsAccepted)}>
           {busy ? 'Working…' : mode === 'signup' ? 'Create account' : 'Sign in'}
         </button>
+        {mode === 'login' ? (
+          <p className="text-center text-sm text-muted">
+            or <Link className="text-primary-dark hover:underline" href="/otp">email me a one-time code instead</Link>
+          </p>
+        ) : null}
       </form>
       <p className="mt-4 text-sm text-muted">
         {mode === 'signup' ? (

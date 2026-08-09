@@ -8,6 +8,8 @@ const schema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('unban'), email: z.string().email() }),
   z.object({ action: z.literal('set_role'), user_id: z.string().uuid(), role: z.enum(['member', 'organizer', 'admin']) }),
   z.object({ action: z.literal('delete'), user_id: z.string().uuid() }),
+  z.object({ action: z.literal('reset_password'), user_id: z.string().uuid(), password: z.string().min(8).max(200) }),
+  z.object({ action: z.literal('delete_org'), org_id: z.string().uuid() }),
   z.object({
     action: z.literal('add_organizer'),
     email: z.string().email(),
@@ -38,6 +40,19 @@ export async function POST(request: Request) {
   if (input.action === 'delete') {
     if (input.user_id === admin.userId) return NextResponse.json({ error: "You can't delete yourself" }, { status: 400 });
     const { error } = await db.auth.admin.deleteUser(input.user_id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    return NextResponse.json({ ok: true });
+  }
+  if (input.action === 'reset_password') {
+    const { error } = await db.auth.admin.updateUserById(input.user_id, { password: input.password });
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    return NextResponse.json({ ok: true });
+  }
+  if (input.action === 'delete_org') {
+    // organizations cascades to org_members, templates, delegates and
+    // credentials (all `on delete cascade` in 0001_init.sql); credential_events
+    // cascade off credentials. Storage assets are left behind on purpose.
+    const { error } = await db.from('organizations').delete().eq('id', input.org_id);
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
     return NextResponse.json({ ok: true });
   }

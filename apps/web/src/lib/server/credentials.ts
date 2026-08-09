@@ -80,6 +80,69 @@ export async function issueCredential(admin: SupabaseClient, input: IssueInput):
   return { id, verification_code, status: existing ? 'claimed' : 'issued', recipient_email: email };
 }
 
+/** Reserved fields_json key holding the pre-correction name (signed, so the disclosure is tamper-evident). */
+export const NAME_HISTORY_KEY = '__original_name';
+
+/**
+ * Recipient name correction ("fix my name"). Rebuilds the canonical credential
+ * with the new name and re-signs it, so the verify page stays VERIFIED — but
+ * bounded so it cannot become a re-attestation loophole:
+ *   - only the claimed recipient, and only while not revoked;
+ *   - ONE correction per credential, ever;
+ *   - the original name is kept in the signed fields (NAME_HISTORY_KEY) and
+ *     disclosed on the public verify page;
+ *   - a 'renamed' audit event is recorded.
+ * issued_at is re-serialized with toISOString(), which byte-matches the
+ * verify RPC's to_char(... 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') format.
+ */
+export async function renameCredential(
+  admin: SupabaseClient,
+  credentialId: string,
+  userId: string,
+  newName: string,
+): Promise<{ verification_code: string }> {
+  const name = newName.trim();
+  if (name.length < 2 || name.length > 200) throw new Error('Enter the corrected full name (2–200 characters).');
+
+  const { data: row, error: readError } = await admin
+    .from('credentials')
+    .select('id, type, org_id, template_id, recipient_email, recipient_user_id, recipient_name, fields_json, event_name, issued_at, status, verification_code')
+    .eq('id', credentialId)
+    .maybeSingle();
+  if (readError || !row) throw new Error('Credential not found');
+  if (row.recipient_user_id !== userId) throw new Error('Only the credential holder can fix the name');
+  if (row.status === 'revoked') throw new Error('This credential has been revoked and can no longer be changed');
+
+  const fields = { ...(row.fields_json as Record<string, string>) };
+  if (typeof fields[NAME_HISTORY_KEY] === 'string') {
+    throw new Error('The name on this credential has already been corrected once. Ask the issuing conference to re-issue it if it is still wrong.');
+  }
+  fields[NAME_HISTORY_KEY] = row.recipient_name;
+  if (typeof fields.recipient_name === 'string') fields.recipient_name = name;
+
+  const canonical: CanonicalCredential = {
+    id: row.id,
+    type: row.type as CanonicalCredential['type'],
+    org_id: String(row.org_id).toLowerCase(),
+    template_id: String(row.template_id).toLowerCase(),
+    recipient_email: row.recipient_email,
+    recipient_name: name,
+    fields_json: fields,
+    event_name: row.event_name,
+    issued_at: new Date(row.issued_at).toISOString(),
+    verification_code: row.verification_code,
+  };
+  const signature = signCredential(canonical, await getSigningPrivateKey());
+
+  const { error } = await admin
+    .from('credentials')
+    .update({ recipient_name: name, fields_json: fields, signature })
+    .eq('id', row.id);
+  if (error) throw new Error(`Rename failed: ${error.message}`);
+  await admin.from('credential_events').insert({ credential_id: row.id, event: 'renamed' });
+  return { verification_code: row.verification_code };
+}
+
 /** Revocation: status flip + audit event. The signature stays intact (tamper-evidence). */
 export async function revokeCredential(admin: SupabaseClient, credentialId: string, orgId: string): Promise<void> {
   const { error } = await admin

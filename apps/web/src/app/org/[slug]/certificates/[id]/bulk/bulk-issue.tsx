@@ -48,6 +48,7 @@ export function BulkIssue({ orgId, template, aiEnabled }: { orgId: string; templ
   const [skills, setSkills] = useState('');
   const [expires, setExpires] = useState('');
   const [previewUrl, setPreviewUrl] = useState('');
+  const [aiDesc, setAiDesc] = useState<string[]>([]);
   const [progress, setProgress] = useState(-1);
   const [results, setResults] = useState<IssuedRow[]>([]);
   const [error, setError] = useState('');
@@ -102,6 +103,7 @@ export function BulkIssue({ orgId, template, aiEnabled }: { orgId: string; templ
       setSheet(name);
       setColumns(cols);
       setRows(parsed);
+      setAiDesc([]); // drafted descriptions are positional — stale after any row change
       // Auto-map by fuzzy header match — never overwrite an existing choice
       // (saved mappings and fixed values are kept).
       setMapping((prev) => {
@@ -132,7 +134,7 @@ export function BulkIssue({ orgId, template, aiEnabled }: { orgId: string; templ
     }
   }
 
-  function valuesForRow(row: Record<string, string>): Record<string, string> {
+  function valuesForRow(row: Record<string, string>, index: number): Record<string, string> {
     const values: Record<string, string> = {};
     for (const [target, column] of Object.entries(mapping)) {
       if (target === EMAIL_KEY) continue;
@@ -145,7 +147,40 @@ export function BulkIssue({ orgId, template, aiEnabled }: { orgId: string; templ
     if (eventName && !values.event_name && fieldKeys.includes('event_name')) {
       values.event_name = eventName;
     }
+    // AI-drafted description fills the gap when nothing is mapped/typed for it.
+    if (!values.description && aiDesc[index] && fieldKeys.includes('description')) {
+      values.description = aiDesc[index];
+    }
     return values;
+  }
+
+  async function aiDescriptions() {
+    setBusy('desc');
+    setError('');
+    try {
+      const items = rows.map((row, i) => {
+        const v = valuesForRow(row, i);
+        const nameCol = mapping[NAME_KEY];
+        return {
+          name: (nameCol === FIXED ? fixed[NAME_KEY] : nameCol ? row[nameCol] : '') || 'the delegate',
+          award: v.award ?? '',
+          committee: v.committee ?? row['Committee'] ?? '',
+          country: v.country ?? row['Country'] ?? '',
+        };
+      });
+      const res = await fetch('/api/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'descriptions', rows: items, event_name: eventName }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'AI description drafting failed');
+      setAiDesc(data.descriptions);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy('');
+    }
   }
 
   async function aiClean() {
@@ -160,6 +195,7 @@ export function BulkIssue({ orgId, template, aiEnabled }: { orgId: string; templ
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'AI cleanup failed');
       setRows(data.rows);
+      setAiDesc([]); // row order/count may have changed — re-draft descriptions
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -179,7 +215,7 @@ export function BulkIssue({ orgId, template, aiEnabled }: { orgId: string; templ
           background_url: template.background_url,
           layout_json: template.layout_json,
           page_size: template.page_size,
-          values: rows[0] ? valuesForRow(rows[0]) : {},
+          values: rows[0] ? valuesForRow(rows[0], 0) : {},
         }),
       });
       if (!res.ok) throw new Error('Preview failed');
@@ -221,7 +257,7 @@ export function BulkIssue({ orgId, template, aiEnabled }: { orgId: string; templ
             event_name: eventName,
             recipient_email: email,
             recipient_name: name,
-            values: valuesForRow(row),
+            values: valuesForRow(row, i),
             skills: skills.split(',').map((s) => s.trim()).filter(Boolean),
             expires: expires || undefined,
           }),
@@ -271,6 +307,11 @@ export function BulkIssue({ orgId, template, aiEnabled }: { orgId: string; templ
         {rows.length > 0 && aiEnabled ? (
           <button className={buttonClass.outline} onClick={aiClean} disabled={busy !== ''}>
             {busy === 'clean' ? 'Cleaning…' : '✨ AI clean-up'}
+          </button>
+        ) : null}
+        {rows.length > 0 && aiEnabled && fieldKeys.includes('description') ? (
+          <button className={buttonClass.outline} onClick={aiDescriptions} disabled={busy !== ''}>
+            {busy === 'desc' ? 'Drafting…' : aiDesc.length ? '✨ Re-draft descriptions' : '✨ AI descriptions'}
           </button>
         ) : null}
       </div>

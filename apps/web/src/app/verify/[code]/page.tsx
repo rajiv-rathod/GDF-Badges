@@ -99,6 +99,11 @@ export default async function VerifyPage({ params }: { params: Promise<{ code: s
               <div>
                 <dt className="text-xs uppercase tracking-wide text-muted">Awarded to</dt>
                 <dd className="mt-1 font-display text-lg font-semibold">{data.recipient_name}</dd>
+                {typeof fields.__original_name === 'string' && fields.__original_name ? (
+                  <p className="mt-1 text-xs text-muted">
+                    Name corrected by the holder — originally issued to &ldquo;{fields.__original_name}&rdquo;.
+                  </p>
+                ) : null}
               </div>
               <div>
                 <dt className="text-xs uppercase tracking-wide text-muted">Issued by</dt>
@@ -138,10 +143,10 @@ export default async function VerifyPage({ params }: { params: Promise<{ code: s
               </div>
             ) : null}
 
-            {Object.entries(fields).filter(([k]) => !['recipient_name', 'skills', 'evidence', 'expires'].includes(k)).length > 0 ? (
+            {Object.entries(fields).filter(([k]) => !['recipient_name', 'skills', 'evidence', 'expires'].includes(k) && !k.startsWith('__')).length > 0 ? (
               <div className="mt-6 border-t border-border pt-4">
                 {Object.entries(fields)
-                  .filter(([k]) => !['recipient_name', 'skills', 'evidence', 'expires'].includes(k))
+                  .filter(([k]) => !['recipient_name', 'skills', 'evidence', 'expires'].includes(k) && !k.startsWith('__'))
                   .map(([k, v]) => (
                     <p key={k} className="text-sm">
                       <span className="text-muted">{k.replace(/_/g, ' ')}: </span>
