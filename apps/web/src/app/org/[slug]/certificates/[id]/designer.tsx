@@ -139,6 +139,7 @@ export function Designer({ orgId, orgSlug, template }: { orgId: string; orgSlug:
   const [selId, setSelId] = useState<string | null>(els[0]?.id ?? null);
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [showPresets, setShowPresets] = useState(els.length === 0);
 
   const drag = useRef<{ id: string; mode: 'move' | 'resize'; ox: number; oy: number; sw: number; sh: number } | null>(null);
@@ -255,9 +256,25 @@ export function Designer({ orgId, orgSlug, template }: { orgId: string; orgSlug:
     if (!res.ok) throw new Error(data.error ?? 'Upload failed');
     return data.url as string;
   }
+  /** True for decorative rects that blanket (almost) the whole page. */
+  const isFullPageRect = (e: El) =>
+    e.type === 'rect' && e.x <= 1 && e.y <= 1 && e.width >= 98 && (e.height ?? 0) >= 98 && e.fill !== 'none';
+
   async function uploadBackground(file: File) {
     setBusy('upload'); setError('');
-    try { setBgUrl((await upload(file)) ?? ''); } catch (err) { setError((err as Error).message); } finally { setBusy(''); }
+    try {
+      const url = (await upload(file)) ?? '';
+      setBgUrl(url);
+      // A preset's full-page colour rect would sit ON TOP of the uploaded
+      // background and hide it — drop those automatically.
+      if (url) {
+        setEls((l) => {
+          const kept = l.filter((e) => !isFullPageRect(e));
+          if (kept.length !== l.length) setNotice('Removed the full-page colour layer so your background shows through.');
+          return kept;
+        });
+      }
+    } catch (err) { setError((err as Error).message); } finally { setBusy(''); }
   }
   async function uploadImageEl(file: File) {
     setBusy('img'); setError('');
@@ -327,13 +344,14 @@ export function Designer({ orgId, orgSlug, template }: { orgId: string; orgSlug:
             <h2 className="font-display font-semibold">Start from a premade design</h2>
             <button className="text-xs text-muted hover:text-foreground" onClick={() => setShowPresets(false)}>Close</button>
           </div>
-          <div className="mt-3 grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <div className="mt-3 grid max-h-[420px] grid-cols-2 gap-3 overflow-y-auto pr-1 sm:grid-cols-4 lg:grid-cols-6">
             {CERT_PRESETS.map((p) => (
-              <button key={p.id} onClick={() => loadPreset(p.id)} className="group overflow-hidden rounded-lg border border-border text-left transition hover:border-primary">
-                <div className="flex aspect-[1.414] items-center justify-center" style={{ background: p.id.includes('light') || p.id === 'minimal' || p.id === 'modern-magenta' ? '#fdfafd' : '#0c0a2e' }}>
-                  <span className="font-display text-sm font-bold" style={{ color: p.accent }}>{p.name}</span>
+              <button key={p.id} onClick={() => loadPreset(p.id)} className="group overflow-hidden rounded-lg border border-border text-left transition hover:-translate-y-0.5 hover:border-primary hover:shadow-md">
+                <div className="relative flex aspect-[1.414] items-center justify-center" style={{ background: p.tileBg }}>
+                  <span className="absolute inset-2 rounded-sm border" style={{ borderColor: p.accent, opacity: 0.6 }} />
+                  <span className="px-2 text-center font-display text-[11px] font-bold leading-tight" style={{ color: p.accent }}>{p.name.split(' · ')[1] ?? p.name}</span>
                 </div>
-                <p className="px-2 py-1.5 text-xs font-semibold text-muted group-hover:text-foreground">{p.name}</p>
+                <p className="truncate px-2 py-1.5 text-[11px] font-semibold text-muted group-hover:text-foreground">{p.name}</p>
               </button>
             ))}
           </div>
@@ -341,6 +359,7 @@ export function Designer({ orgId, orgSlug, template }: { orgId: string; orgSlug:
       ) : null}
 
       {error ? <div className="mb-4"><ErrorBox message={error} /></div> : null}
+      {notice ? <p className="mb-4 rounded-sm border border-primary/50 bg-primary/10 px-4 py-2 text-sm">{notice}</p> : null}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
         {/* canvas */}

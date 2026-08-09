@@ -65,6 +65,27 @@ function elType(el: RawEl): string {
   return str(el.type, 'field') || 'field';
 }
 
+/** Greedy word-wrap so long values (e.g. AI descriptions) fit their box. */
+function wrapLines(font: PDFFont, text: string, size: number, maxW: number, maxLines = 10): string[] {
+  const out: string[] = [];
+  for (const para of text.split('\n')) {
+    let line = '';
+    for (const word of para.split(/\s+/).filter(Boolean)) {
+      const candidate = line ? `${line} ${word}` : word;
+      if (line && font.widthOfTextAtSize(candidate, size) > maxW) {
+        out.push(line);
+        line = word;
+      } else {
+        line = candidate;
+      }
+      if (out.length >= maxLines) return out;
+    }
+    out.push(line);
+    if (out.length >= maxLines) return out;
+  }
+  return out;
+}
+
 function drawTextValue(page: PDFPage, font: PDFFont, el: RawEl, value: string, pw: number, ph: number) {
   if (!value) return;
   const size = num(el.size, 16);
@@ -72,7 +93,7 @@ function drawTextValue(page: PDFPage, font: PDFFont, el: RawEl, value: string, p
   const boxX = (num(el.x) / 100) * pw;
   const boxW = (num(el.width, 40) / 100) * pw;
   const color = hexToRgb(str(el.color, '#1b1440'));
-  const lines = value.split('\n');
+  const lines = wrapLines(font, value, size, boxW);
   lines.forEach((line, i) => {
     const textW = font.widthOfTextAtSize(line, size);
     let x = boxX;

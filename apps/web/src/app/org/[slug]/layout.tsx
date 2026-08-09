@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { brand } from '@gdf/shared';
 import { AppNav } from '@/components/nav';
 import { requireOrgStaff } from '@/lib/server/auth';
 
@@ -40,14 +39,6 @@ export default async function OrgLayout({
                 {tab.label}
               </Link>
             ))}
-            <a
-              href={brand.meetingAppUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="ml-auto whitespace-nowrap rounded-sm border border-primary px-4 py-1.5 font-semibold text-primary-dark transition hover:bg-primary/10"
-            >
-              Launch meeting app ↗
-            </a>
           </nav>
         </div>
       </div>

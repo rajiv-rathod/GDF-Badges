@@ -21,7 +21,7 @@ const FEATURES: Feature[] = [
   { kicker: 'Collect & share', title: 'Wallet', body: 'Delegates gather every credential in one place and share a public profile link.', icon: icon('M3 7h18v12H3z|M3 7l2-3h14l2 3|M16 13h.01') },
   { kicker: 'Tamper-evident', title: 'Verification', body: 'A unique Certificate ID and Ed25519 signature anyone can check at a public page.', icon: icon('M12 3l7 4v5c0 5-3 8-7 9-4-1-7-4-7-9V7z|M9 12l2 2 4-4') },
   { kicker: 'Track engagement', title: 'Analytics', body: 'See issued, claimed, shared and verified counts across your whole conference.', icon: icon('M4 20V4|M4 20h16|M8 16v-4|M12 16V8|M16 16v-7') },
-  { kicker: 'Run committees', title: 'Meetings', body: 'Launch straight into live committee sessions in the GDF meeting app.', icon: icon('M15 10l5-3v10l-5-3z|M3 6h12v12H3z') },
+  { kicker: 'Bulk in minutes', title: 'Sheet import', body: 'Import any spreadsheet, map or fix values live, and issue hundreds of credentials at once.', icon: icon('M4 4h16v16H4z|M4 9h16|M9 4v16') },
 ];
 
 export function FeatureSlider() {

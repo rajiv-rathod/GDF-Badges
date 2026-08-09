@@ -42,6 +42,28 @@ export async function draftCitation(input: {
   return text.trim();
 }
 
+/**
+ * Batch-draft certificate description lines — ONE model call for the whole
+ * roster, so bulk issuing 100+ rows doesn't hit per-request rate limits.
+ */
+export async function generateDescriptions(
+  rows: Array<{ name: string; award?: string; committee?: string; country?: string }>,
+  eventName: string,
+): Promise<string[]> {
+  const text = await generate(
+    `For each delegate below, write one dignified certificate description sentence ` +
+      `(15-28 words, formal diplomatic tone, no name repetition — the name appears elsewhere ` +
+      `on the certificate). Conference: ${eventName || 'a Model UN conference'}. ` +
+      `Return ONLY a JSON array of strings, same order and length as the input.\n\n` +
+      JSON.stringify(rows),
+    true,
+  );
+  const parsed = JSON.parse(text);
+  if (!Array.isArray(parsed) || !parsed.every((s) => typeof s === 'string')) throw new Error('Unexpected AI response');
+  if (parsed.length !== rows.length) throw new Error('AI returned a mismatched number of descriptions');
+  return parsed;
+}
+
 /** Clean an imported delegate sheet: fix casing, trim, dedupe by email. */
 export async function cleanDelegateRows(
   rows: Array<Record<string, string>>,

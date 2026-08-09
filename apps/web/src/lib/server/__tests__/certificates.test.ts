@@ -31,6 +31,20 @@ describe('renderCertificatePdf', () => {
     expect(new TextDecoder().decode(bytes.slice(0, 5))).toBe('%PDF-');
   });
 
+  it('word-wraps long description values instead of overflowing', async () => {
+    const withDesc: CertElement[] = [
+      ...layout,
+      { id: 'desc', type: 'field', key: 'description', x: 18, y: 60, width: 64, font: 'Helvetica', size: 11, weight: 400, align: 'center', color: '#6f6690', sample: '' },
+    ];
+    const long = 'In recognition of exceptional diplomacy, rigorous research, and outstanding leadership demonstrated across every committee session of the conference, and for exemplary service to the spirit of multilateralism.';
+    const bytes = await renderCertificatePdf(
+      { background_url: '', layout_json: withDesc, page_size: 'A4-landscape' },
+      { recipient_name: 'X', description: long },
+    );
+    expect(new TextDecoder().decode(bytes.slice(0, 5))).toBe('%PDF-');
+    expect(bytes.length).toBeGreaterThan(1000);
+  });
+
   it('renders the Certificate ID / verify URL from the reserved keys', async () => {
     // Integrity: the printed Certificate ID must be the exact verification_code
     // that forms the public verify URL. A missing key must not throw.

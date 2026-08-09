@@ -25,6 +25,28 @@ export interface WalletCredential {
 
 export function WalletGrid({ credentials }: { credentials: WalletCredential[] }) {
   const [items, setItems] = useState(credentials);
+  const [renaming, setRenaming] = useState('');
+
+  async function fixName(credential: WalletCredential) {
+    const name = window.prompt(
+      'Correct the name shown on this credential. It will be re-signed and the certificate PDF re-rendered.',
+      credential.recipient_name,
+    );
+    if (!name || name.trim() === credential.recipient_name) return;
+    setRenaming(credential.id);
+    const res = await fetch(`/api/credentials/${credential.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'rename', name: name.trim() }),
+    });
+    setRenaming('');
+    if (res.ok) {
+      setItems((prev) => prev.map((c) => (c.id === credential.id ? { ...c, recipient_name: name.trim() } : c)));
+    } else {
+      const data = await res.json().catch(() => ({}));
+      window.alert(`Could not fix the name: ${data.error ?? res.statusText}`);
+    }
+  }
 
   async function toggleVisibility(credential: WalletCredential) {
     const next = !credential.is_public;
@@ -76,6 +98,11 @@ export function WalletGrid({ credentials }: { credentials: WalletCredential[] })
               <a className="font-semibold text-primary-dark hover:underline" href={c.asset_url} target="_blank" rel="noreferrer">
                 Download
               </a>
+            ) : null}
+            {c.status !== 'revoked' ? (
+              <button className="font-semibold text-muted hover:text-foreground" onClick={() => fixName(c)} disabled={renaming === c.id}>
+                {renaming === c.id ? 'Fixing…' : 'Fix name'}
+              </button>
             ) : null}
             <label className="ml-auto flex cursor-pointer items-center gap-1.5 text-xs text-muted">
               <input type="checkbox" checked={c.is_public} onChange={() => toggleVisibility(c)} className="accent-[#d73cbe]" />
